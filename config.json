@@ -1,0 +1,345 @@
+{
+    "telegram_bot_token": "TU_BOT_TOKEN_AQUI",
+    "telegram_chat_id": "TU_CHAT_ID_AQUI",
+    "check_interval_minutes": 15,
+    "check_interval_high_minutes": 5,
+    "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "required_keywords": [
+        "mega evolution",
+        "megaevolución",
+        "megaevolucion",
+        "ascended heroes",
+        "héroes ascendidos",
+        "heroes ascendidos",
+        "perfect order",
+        "orden perfecto",
+        "pokemon day 2026",
+        "pokémon day 2026",
+        "pokemon day collection",
+        "30th anniversary",
+        "30 aniversario",
+        "30 anniversary",
+        "30 aniv",
+        "30th aniv",
+        "ME01",
+        "ME-01",
+        "n's zekrom",
+        "zekrom de n"
+    ],
+
+    "_comment_high": "=== PRIORITY HIGH — CASES & TIENDAS CON PREVENTA 30 ANIV ===",
+    "sites": [
+        {
+            "name": "LegendaryCards.eu (Cases)",
+            "url": "https://www.legendarycards.eu/pokemon/sealed-cases/",
+            "type": "html",
+            "priority": "high",
+            "selector": "li.product, .product-card, .product",
+            "title_selector": ".woocommerce-loop-product__title, h2, .product-card-title",
+            "link_selector": "a",
+            "price_selector": ".price, .product-price"
+        },
+        {
+            "name": "Pokemon Plug (Cases)",
+            "url": "https://pokemonplug.com/collections/factory-sealed-cases?sort_by=created-descending",
+            "type": "html",
+            "priority": "high",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3, .product-title",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "TCG Corner (Cases)",
+            "url": "https://tcg-corner.com/collections/pokemon-case-box?sort_by=created-descending",
+            "type": "html",
+            "priority": "high",
+            "selector": ".card-wrapper, .product-card, .grid__item",
+            "title_selector": ".card__heading, .product-card-title, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price-item, .price"
+        },
+        {
+            "name": "TCGBoxShop",
+            "url": "https://tcgboxshop.com/collections/all?sort_by=created-descending",
+            "type": "html",
+            "priority": "high",
+            "selector": ".card-wrapper, .product-card",
+            "title_selector": ".card__heading, .product-card-title",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price-item, .price"
+        },
+        {
+            "name": "MHDealsPlus (Cases)",
+            "url": "https://mhdealsplus.com/collections/all?sort_by=created-descending",
+            "type": "html",
+            "priority": "high",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "Cash Cards Unlimited",
+            "url": "https://cashcardsunlimited.com/collections/pokemon-sealed-product?sort_by=created-descending",
+            "type": "html",
+            "priority": "high",
+            "selector": ".product-card, .card-wrapper",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "Flipside Gaming",
+            "url": "https://flipsidegaming.com/collections/pokemon-sealed?sort_by=created-descending",
+            "type": "html",
+            "priority": "high",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "TCGStadium",
+            "url": "https://tcg-stadium.com/collections/english-sealed-products?sort_by=created-descending",
+            "type": "html",
+            "priority": "high",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "Pokemon Center (US)",
+            "url": "https://www.pokemoncenter.com/category/booster-packs",
+            "type": "html",
+            "priority": "high",
+            "selector": "[data-testid='product-tile'], .product-card, article",
+            "title_selector": "h3, .product-title, [data-testid='product-title']",
+            "link_selector": "a",
+            "price_selector": "[data-testid='product-price'], .price"
+        },
+        {
+            "name": "GameStop Pokemon",
+            "url": "https://www.gamestop.com/toys-games/trading-cards/pokemon",
+            "type": "html",
+            "priority": "high",
+            "selector": ".product-tile, .product, [data-testid='product']",
+            "title_selector": ".product-name, .pdp-link, h3",
+            "link_selector": "a",
+            "price_selector": ".sales, .price"
+        },
+
+        {
+            "_comment": "=== PRIORITY MEDIUM — ESPAÑA, BOXES Y ETB ===",
+            "name": "Pokemillon",
+            "url": "https://www.pokemillon.com/collections/cajas-de-sobres?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "TodoHits",
+            "url": "https://todohits.com/collections/pokemon?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "Pokezilla",
+            "url": "https://pokezilla.com/collections/all?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "PokedealTCG",
+            "url": "https://www.pokedealtcg.es/collections/todos-los-sellados?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "JJ Collection",
+            "url": "https://www.jjcollection.es/collections/pokemon-tcg-booster-box?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "Kantocards",
+            "url": "https://kantocards.com/collections/booster-boxes?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "Pokewoke",
+            "url": "https://pokewoke.store/categoria-producto/pokemon/?orderby=date",
+            "type": "html",
+            "priority": "medium",
+            "selector": "li.product",
+            "title_selector": ".woocommerce-loop-product__title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        },
+        {
+            "name": "Stargeek",
+            "url": "https://www.stargeek.es/cartas-pokemon/?orderby=date",
+            "type": "html",
+            "priority": "medium",
+            "selector": "li.product",
+            "title_selector": ".woocommerce-loop-product__title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        },
+        {
+            "name": "SuperCollectors",
+            "url": "https://www.supercollectors.es/categoria-producto/boxes-packs/cartas-pokemon/?orderby=date",
+            "type": "html",
+            "priority": "medium",
+            "selector": "li.product",
+            "title_selector": ".woocommerce-loop-product__title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        },
+        {
+            "name": "Collectorage",
+            "url": "https://collectorage.com/shop/cartas-tcg/pokemon/?orderby=date",
+            "type": "html",
+            "priority": "medium",
+            "selector": "li.product",
+            "title_selector": ".woocommerce-loop-product__title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        },
+        {
+            "name": "Factory Cards TCG",
+            "url": "https://factorycardstcg.com/en/collections/comprarcartaspokemon?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "Isekai Alcorcon",
+            "url": "https://isekai-alcorcon.es/es/c/juegos-tcg/6",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-miniature",
+            "title_selector": ".product-title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        },
+        {
+            "name": "Dungeon Marvels",
+            "url": "https://dungeonmarvels.com/188-pokemon",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-miniature",
+            "title_selector": ".product-title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        },
+        {
+            "name": "Distrito Zero",
+            "url": "https://distritozero.es/categoria/61-pokemon-tcg-113",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-miniature",
+            "title_selector": ".product-title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        },
+        {
+            "name": "El Bastion del Sur",
+            "url": "https://www.elbastiondelsur.com/categoria-producto/pokemon-tcg/?orderby=date",
+            "type": "html",
+            "priority": "medium",
+            "selector": "li.product",
+            "title_selector": ".woocommerce-loop-product__title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        },
+        {
+            "name": "La Escotilla",
+            "url": "https://laescotillajuegos.com/collections/pokemon?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "CardCrack",
+            "url": "https://cardcrack.com/categoria-producto/pokemon/?orderby=date",
+            "type": "html",
+            "priority": "medium",
+            "selector": "li.product",
+            "title_selector": ".woocommerce-loop-product__title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        },
+        {
+            "name": "The Golden Rabbit",
+            "url": "https://thegoldenrabbitshop.es/collections/pokemon?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "BattleDeck Canarias",
+            "url": "https://www.battledeck.es/collections/pokemon?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "Asturcards",
+            "url": "https://www.asturcards.com/collections/pokemon?sort_by=created-descending",
+            "type": "html",
+            "priority": "medium",
+            "selector": ".product-card, .card-wrapper, .grid__item",
+            "title_selector": ".product-card-title, .card__heading, h3",
+            "link_selector": "a[href*='/products/']",
+            "price_selector": ".price, .price-item"
+        },
+        {
+            "name": "CardZone",
+            "url": "https://cardzone.es/categoria-producto/cartas-pokemon/?orderby=date",
+            "type": "html",
+            "priority": "medium",
+            "selector": "li.product",
+            "title_selector": ".woocommerce-loop-product__title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        }
+    ]
+}
