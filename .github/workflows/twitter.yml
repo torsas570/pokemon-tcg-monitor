@@ -1,0 +1,36 @@
+name: Monitor Twitter Pokemon Drops
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # Cada 10 min
+  workflow_dispatch:
+
+jobs:
+  twitter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - uses: actions/cache/restore@v4
+        with:
+          path: tweets_state.json
+          key: tweets-state
+          restore-keys: tweets-state
+      - env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python3 twitter_monitor.py
+      - name: Delete previous cache
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh cache delete tweets-state --repo $GITHUB_REPOSITORY || true
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: tweets_state.json
+          key: tweets-state
