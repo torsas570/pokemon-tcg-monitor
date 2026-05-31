@@ -80,15 +80,19 @@ def extract_products_html(html, site_cfg):
 
 def extract_products_api(data):
     """WooCommerce Store API genérica."""
+    import html as html_mod
     products = []
     items = data if isinstance(data, list) else data.get("products", [])
     for item in items:
-        title = item.get("name", "Sin título")
+        title = html_mod.unescape(item.get("name", "Sin título"))
         link = item.get("permalink") or item.get("url", "")
         prices = item.get("prices", {}) or {}
-        raw_price = prices.get("price", "0")
+        raw_price = prices.get("price") or "0"
         currency = prices.get("currency_symbol", "€")
-        price = f"{int(raw_price) / 100:.2f}{currency}" if raw_price else "Precio no disponible"
+        try:
+            price = f"{int(raw_price) / 100:.2f}{currency}"
+        except (ValueError, TypeError):
+            price = "Precio no disponible"
         uid = hashlib.md5(f"{item.get('id', '')}{title}".encode()).hexdigest()
         products.append({"uid": uid, "title": title, "link": link, "price": price})
     return products
@@ -121,7 +125,20 @@ def check_site(site_cfg, state, config):
     required_keywords = config.get("required_keywords", [])
     log.info(f"[{site_cfg.get('priority', 'medium').upper()}] {name}: {url}")
     try:
-        headers = {"User-Agent": config["user_agent"]}
+        headers = {
+            "User-Agent": config["user_agent"],
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+            "Accept-Encoding": "gzip, deflate",
+            "Sec-Ch-Ua": '"Chromium";v="131", "Not_A Brand";v="24"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
+        }
         resp = requests.get(url, headers=headers, timeout=30)
         resp.raise_for_status()
         if site_type == "api":
