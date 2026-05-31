@@ -28,8 +28,9 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: state.json
-          key: monitor-state
-          restore-keys: monitor-state
+          # Clave única por run + restauración por prefijo (compartida con monitor-high).
+          key: monitor-state-${{ github.run_id }}
+          restore-keys: monitor-state-
 
       - name: Run monitor
         env:
@@ -37,16 +38,9 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python3 monitor.py
 
-      - name: Delete previous cache
-        if: always()
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh cache delete monitor-state --repo $GITHUB_REPOSITORY || true
-
       - name: Save state
-        uses: actions/cache/save@v5
         if: always()
+        uses: actions/cache/save@v5
         with:
           path: state.json
           key: monitor-state-${{ github.run_id }}

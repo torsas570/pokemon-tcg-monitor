@@ -17,7 +17,8 @@ jobs:
       - uses: actions/cache/restore@v5
         with:
           path: state.json
-          key: monitor-state
+          # Clave única por run + restauración por prefijo (compartida con monitor.yml).
+          key: monitor-state-${{ github.run_id }}
           restore-keys: monitor-state-
       - env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -27,4 +28,4 @@ jobs:
         if: always()
         with:
           path: state.json
-          key: monitor-state
+          key: monitor-state-${{ github.run_id }}
