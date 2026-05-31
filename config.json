@@ -3,6 +3,7 @@
     "telegram_chat_id": "5330152363",
     "check_interval_minutes": 15,
     "check_interval_high_minutes": 5,
+    "notify_only_in_stock": true,
     "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "required_keywords": [
         "mega evolution",
