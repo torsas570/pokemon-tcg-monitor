@@ -1,6 +1,6 @@
 {
     "telegram_bot_token": "USE_GITHUB_SECRET",
-    "telegram_chat_id": "5330152363",
+    "telegram_chat_id": "USE_GITHUB_SECRET",
     "check_interval_minutes": 15,
     "check_interval_high_minutes": 5,
     "notify_only_in_stock": true,

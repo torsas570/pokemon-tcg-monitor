@@ -258,8 +258,8 @@ def run_once(priority_filter=None):
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN") or config["telegram_bot_token"]
     chat_id = os.environ.get("TELEGRAM_CHAT_ID") or config["telegram_chat_id"]
 
-    if bot_token == "TU_BOT_TOKEN_AQUI":
-        log.error("⚠️  Configura Telegram: python3 setup_telegram.py")
+    if bot_token in ("TU_BOT_TOKEN_AQUI", "USE_GITHUB_SECRET", "", None):
+        log.error("⚠️  Falta TELEGRAM_BOT_TOKEN (env o config.json)")
         sys.exit(1)
 
     sites = config["sites"]
