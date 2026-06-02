@@ -88,12 +88,6 @@
             "priority": "high"
         },
         {
-            "name": "CardCenter (Reserva)",
-            "url": "https://cardcenter.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "high"
-        },
-        {
             "name": "LegendaryCards.eu (Cases)",
             "url": "https://www.legendarycards.eu/pokemon/sealed-cases/",
             "type": "html",
