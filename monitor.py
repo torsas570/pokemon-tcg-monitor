@@ -199,6 +199,7 @@ def check_site(site_cfg, state, config):
     site_type = site_cfg.get("type", "html")
     is_api = site_type == "api"
     required_keywords = config.get("required_keywords", [])
+    exclude_keywords = config.get("exclude_keywords", [])
     notify_only_in_stock = config.get("notify_only_in_stock", True)
     log.info(f"[{site_cfg.get('priority', 'medium').upper()}] {name}: {url}")
 
@@ -234,8 +235,18 @@ def check_site(site_cfg, state, config):
         return []
 
     if required_keywords:
-        filtered = [p for p in products if matches_keywords(p["title"], required_keywords)]
-        log.info(f"  {name}: {len(products)} detectados, {len(filtered)} matchean 30 aniv")
+        filtered = [
+            p for p in products
+            if matches_keywords(p["title"], required_keywords)
+            and not (exclude_keywords and matches_keywords(p["title"], exclude_keywords))
+        ]
+        n_excl = sum(
+            1 for p in products
+            if matches_keywords(p["title"], required_keywords)
+            and exclude_keywords and matches_keywords(p["title"], exclude_keywords)
+        )
+        log.info(f"  {name}: {len(products)} detectados, {len(filtered)} matchean 30 aniv"
+                 + (f" ({n_excl} descartados por idioma)" if n_excl else ""))
         products = filtered
     else:
         log.info(f"  {name}: {len(products)} productos detectados")
