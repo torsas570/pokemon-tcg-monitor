@@ -58,21 +58,37 @@ def save_state(state):
         json.dump(state, f, indent=2, ensure_ascii=False)
 
 
-def build_headers(user_agent):
-    return {
+def build_headers(user_agent, is_api=False):
+    # Accept-Encoding sin "br": brotli no siempre está instalado y dejaría el
+    # cuerpo sin descomprimir (parseo JSON fallaría con "Expecting value").
+    headers = {
         "User-Agent": user_agent,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
         "Accept-Encoding": "gzip, deflate",
         "Sec-Ch-Ua": '"Chromium";v="131", "Not_A Brand";v="24"',
         "Sec-Ch-Ua-Mobile": "?0",
         "Sec-Ch-Ua-Platform": '"Windows"',
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
         "Upgrade-Insecure-Requests": "1",
     }
+    if is_api:
+        # Petición tipo XHR: muchas tiendas tras Cloudflare/anti-bot solo sirven
+        # el JSON si la cabecera parece una llamada AJAX y no una navegación.
+        headers.update({
+            "Accept": "application/json, text/plain, */*",
+            "X-Requested-With": "XMLHttpRequest",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+        })
+    else:
+        headers.update({
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+        })
+    return headers
 
 
 def detect_html_in_stock(item):
@@ -181,19 +197,40 @@ def check_site(site_cfg, state, config):
     name = site_cfg["name"]
     url = site_cfg["url"]
     site_type = site_cfg.get("type", "html")
+    is_api = site_type == "api"
     required_keywords = config.get("required_keywords", [])
     notify_only_in_stock = config.get("notify_only_in_stock", True)
     log.info(f"[{site_cfg.get('priority', 'medium').upper()}] {name}: {url}")
 
-    try:
-        resp = requests.get(url, headers=build_headers(config["user_agent"]), timeout=30)
-        resp.raise_for_status()
-        if site_type == "api":
-            products = extract_products_api(resp.json(), base_url=url)
-        else:
-            products = extract_products_html(resp.text, site_cfg)
-    except Exception as e:
-        log.error(f"  Error {name}: {e}")
+    headers = build_headers(config["user_agent"], is_api=is_api)
+    if is_api:
+        from urllib.parse import urlparse
+        p = urlparse(url)
+        headers["Referer"] = f"{p.scheme}://{p.netloc}/"
+
+    products = None
+    last_err = None
+    for attempt in range(2):
+        try:
+            resp = requests.get(url, headers=headers, timeout=30)
+            resp.raise_for_status()
+            if is_api:
+                ctype = resp.headers.get("Content-Type", "").lower()
+                if "json" not in ctype:
+                    # Cloudflare/anti-bot devolvió HTML en vez del JSON
+                    raise ValueError(f"respuesta no-JSON (Content-Type: {ctype or 'desconocido'})")
+                products = extract_products_api(resp.json(), base_url=url)
+            else:
+                products = extract_products_html(resp.text, site_cfg)
+            break
+        except Exception as e:
+            last_err = e
+            if attempt == 0:
+                time.sleep(2)
+
+    if products is None:
+        # Fallo persistente (normalmente bloqueo por IP de la web): aviso, no error
+        log.warning(f"  {name} no disponible: {last_err}")
         return []
 
     if required_keywords:
