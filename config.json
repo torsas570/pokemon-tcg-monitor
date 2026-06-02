@@ -52,6 +52,49 @@
             "priority": "high"
         },
         {
+            "_comment": "=== INTERNACIONALES SELLADO (Shopify, envían a España) — inglés prioritario ===",
+            "name": "Otakura (IT)",
+            "url": "https://otakura.com/en/collections/display-buste-pokemon/products.json?limit=250",
+            "type": "api",
+            "priority": "high"
+        },
+        {
+            "name": "RelicTCG (FR)",
+            "url": "https://www.relictcg.com/collections/pokemon-display-boosters/products.json?limit=250",
+            "type": "api",
+            "priority": "high"
+        },
+        {
+            "name": "TCGStore.se (SE)",
+            "url": "https://tcgstore.se/en/collections/pokemon-display-booster-box/products.json?limit=250",
+            "type": "api",
+            "priority": "high"
+        },
+        {
+            "name": "Monster Card Corner (UK)",
+            "url": "https://monstercardcorner.co.uk/collections/new-pokemon-releases/products.json?limit=250",
+            "type": "api",
+            "priority": "high"
+        },
+        {
+            "name": "Pixel and Block (UK)",
+            "url": "https://pixelandblock.co.uk/collections/pokemon-tcg/products.json?limit=250",
+            "type": "api",
+            "priority": "high"
+        },
+        {
+            "name": "Pokemon Plug (US)",
+            "url": "https://pokemonplug.com/collections/pokemon-booster-boxes/products.json?limit=250",
+            "type": "api",
+            "priority": "high"
+        },
+        {
+            "name": "Poke-Collect (US)",
+            "url": "https://poke-collect.com/collections/pokemon-sealed-products/products.json?limit=250",
+            "type": "api",
+            "priority": "high"
+        },
+        {
             "name": "Kantocards (Preventas)",
             "url": "https://kantocards.com/collections/preventas-pokemon",
             "type": "html",
@@ -281,6 +324,31 @@
             "title_selector": ".product-card-title, .card__heading, h3",
             "link_selector": "a[href*='/products/']",
             "price_selector": ".price, .price-item"
+        },
+        {
+            "_comment": "=== SUIZA + IMPORT JAPÓN (Shopify, envían a España; ojo aduanas/IVA) ===",
+            "name": "LaschoCards (CH)",
+            "url": "https://laschocards.ch/en/collections/pokemon-tcg-displays-und-boxen/products.json?limit=250",
+            "type": "api",
+            "priority": "medium"
+        },
+        {
+            "name": "TCGHOBBY (TW)",
+            "url": "https://www.tcghobby.com/collections/new-release-pokemon-tcg/products.json?limit=250",
+            "type": "api",
+            "priority": "medium"
+        },
+        {
+            "name": "PokeUnlimited (JP)",
+            "url": "https://pokeunlimited.com/collections/pokemon-japanese-booster-boxes/products.json?limit=250",
+            "type": "api",
+            "priority": "medium"
+        },
+        {
+            "name": "KrystalKollectz (JP)",
+            "url": "https://krystalkollectz.com/collections/japanesepokemonboxes/products.json?limit=250",
+            "type": "api",
+            "priority": "medium"
         }
     ]
 }
