@@ -332,6 +332,16 @@
             "price_selector": ".price"
         },
         {
+            "name": "La Cueva Roja",
+            "url": "https://lacuevaroja.com/pokemon-tcg",
+            "type": "html",
+            "priority": "medium",
+            "selector": "#js-product-list .product-miniature",
+            "title_selector": ".product-title",
+            "link_selector": "a",
+            "price_selector": ".price"
+        },
+        {
             "name": "La Escotilla",
             "url": "https://laescotillajuegos.com/collections/pokemon?sort_by=created-descending",
             "type": "html",
