@@ -1,8 +1,8 @@
-name: Heartbeat semanal
+name: Heartbeat diario
 
 on:
   schedule:
-    - cron: '0 10 * * 0'  # Domingos a las 10:00 UTC
+    - cron: '0 22 * * *'  # Todos los días a las 22:00 UTC (00:00 hora España, CEST)
   workflow_dispatch:
 
 jobs:
