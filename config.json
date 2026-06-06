@@ -463,12 +463,6 @@
 
         {
             "_comment": "=== AMPLIACIÓN 30 ANIV — MEDIUM: ESPAÑA (Shopify) ===",
-            "name": "Espadas y Más (ES)",
-            "url": "https://espadasymas.com/collections/cartas-pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
             "name": "Ikigai Comics (ES)",
             "url": "https://ikigaicomicstienda.com/collections/pokemon-tcg/products.json?limit=250",
             "type": "api",
@@ -600,7 +594,7 @@
         {
             "_comment": "=== AMPLIACIÓN 30 ANIV — MEDIUM: WooCommerce (ES/PT/FR/IT + import JP). Algunas pueden dar 403 desde GitHub Actions (Cloudflare); el monitor lo gestiona como warning. ===",
             "name": "PokeDimension (ES)",
-            "url": "https://pokedimension.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+            "url": "https://pokedimension.com/wp-json/wc/store/v1/products?per_page=100&orderby=date",
             "type": "api",
             "priority": "medium"
         },
@@ -619,12 +613,6 @@
         {
             "name": "Manavortex (ES)",
             "url": "https://manavortex.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Friki de Nacimiento (ES)",
-            "url": "https://frikidenacimiento.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
             "type": "api",
             "priority": "medium"
         },
@@ -672,7 +660,7 @@
         },
         {
             "name": "TCG Portugal (PT)",
-            "url": "https://tcgportugal.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+            "url": "https://tcgportugal.com/wp-json/wc/store/v1/products?per_page=100&orderby=date",
             "type": "api",
             "priority": "medium"
         },
@@ -711,18 +699,6 @@
             "url": "https://samuraiswordtokyo.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
             "type": "api",
             "priority": "medium"
-        },
-
-        {
-            "_comment": "=== AMPLIACIÓN 30 ANIV — MEDIUM: PrestaShop (funciona desde Actions) ===",
-            "name": "Merchan-Store (ES)",
-            "url": "https://merchan-store.com/2724-pokemon-tcg",
-            "type": "html",
-            "priority": "medium",
-            "selector": ".product-miniature",
-            "title_selector": ".product-title",
-            "link_selector": "a",
-            "price_selector": ".price"
         }
     ]
 }
