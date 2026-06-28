@@ -716,6 +716,18 @@
             "url": "https://samuraiswordtokyo.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
             "type": "api",
             "priority": "medium"
+        },
+        {
+            "name": "Evolution TCG (NL)",
+            "url": "https://evlutcg.com/collections/pokemon/products.json?limit=250",
+            "type": "api",
+            "priority": "medium"
+        },
+        {
+            "name": "Evolution TCG Pre-Orders (NL)",
+            "url": "https://evlutcg.com/collections/pokemon-pre-orders/products.json?limit=250",
+            "type": "api",
+            "priority": "high"
         }
     ]
 }
