@@ -46,7 +46,9 @@ jobs:
             i=$((i+1))
             echo "== Pasada $i =="
             python3 monitor.py || echo "Pasada $i fallo, continuo con la siguiente"
-            sleep 45
+            # Jitter 60-105s: cadencia ~1-2 min por tienda e IRREGULAR (menos "cara
+            # de bot" que un intervalo fijo) -> menor riesgo de bloqueo de IP.
+            sleep $((60 + RANDOM % 46))
           done
           echo "Bloque terminado tras $i pasadas."
 
