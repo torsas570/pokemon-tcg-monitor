@@ -39,6 +39,8 @@ STATE_PATH = BASE_DIR / "state.json"
 
 PRIORITY_EMOJI = {"high": "🚨", "medium": "📦", "low": "🔍"}
 OOS_KEYWORDS = ["agotado", "sold out", "out of stock", "vendido", "no disponible", "rupture de stock"]
+HEALTH_KEY = "__health__"  # clave reservada en state para la salud de las tiendas (no es un sitio)
+DEFAULT_HEALTH_FAIL_THRESHOLD = 3  # fallos seguidos antes de avisar de posible bloqueo/caída
 
 
 def load_config():
@@ -56,6 +58,42 @@ def load_state():
 def save_state(state):
     with open(STATE_PATH, "w") as f:
         json.dump(state, f, indent=2, ensure_ascii=False)
+
+
+def _record_health(state, name, ok, error=None):
+    """Actualiza el contador de fallos consecutivos de una tienda en el state."""
+    health = state.setdefault(HEALTH_KEY, {})
+    h = health.setdefault(name, {"fails": 0, "alerted": False, "last_error": None})
+    if ok:
+        h["fails"] = 0
+        h["last_error"] = None
+    else:
+        h["fails"] = h.get("fails", 0) + 1
+        h["last_error"] = error
+
+
+def _collect_health_alerts(state, config):
+    """Devuelve mensajes SOLO en las transiciones (cae -> avisa / se recupera -> avisa),
+    para no repetir el aviso en cada pasada. Muta los flags 'alerted' en el state."""
+    threshold = config.get("health_fail_threshold", DEFAULT_HEALTH_FAIL_THRESHOLD)
+    health = state.get(HEALTH_KEY, {})
+    msgs = []
+    for name, h in health.items():
+        fails = h.get("fails", 0)
+        alerted = h.get("alerted", False)
+        if fails >= threshold and not alerted:
+            h["alerted"] = True
+            msgs.append(
+                f"⚠️ <b>Aviso de monitor</b>\n\n"
+                f"<b>{name}</b> no responde tras {fails} intentos seguidos "
+                f"(posible bloqueo de IP o caída de la web).\n"
+                f"⚠️ Puede que te estés perdiendo restocks de esta tienda.\n"
+                f"Último error: <code>{h.get('last_error')}</code>"
+            )
+        elif fails == 0 and alerted:
+            h["alerted"] = False
+            msgs.append(f"✅ <b>{name}</b> vuelve a responder con normalidad.")
+    return msgs
 
 
 def build_headers(user_agent, is_api=False):
@@ -232,7 +270,11 @@ def check_site(site_cfg, state, config):
     if products is None:
         # Fallo persistente (normalmente bloqueo por IP de la web): aviso, no error
         log.warning(f"  {name} no disponible: {last_err}")
+        _record_health(state, name, ok=False, error=str(last_err))
         return []
+
+    # Petición OK: resetea el contador de fallos de salud de esta tienda
+    _record_health(state, name, ok=True)
 
     if required_keywords:
         filtered = [
@@ -323,10 +365,16 @@ def run_once(priority_filter=None):
         if alerts:
             all_alerts[site_cfg["name"]] = (site_cfg.get("priority", "medium"), alerts)
 
+    # Avisos de SALUD (tiendas caídas/bloqueadas): solo en las transiciones, no spamea
+    health_msgs = _collect_health_alerts(state, config)
     save_state(state)
 
+    for msg in health_msgs:
+        send_telegram(bot_token, chat_id, msg)
+
     if not all_alerts:
-        log.info("Sin alertas en esta revisión")
+        if not health_msgs:
+            log.info("Sin alertas en esta revisión")
         return
 
     for site_name, (priority, alerts) in all_alerts.items():
