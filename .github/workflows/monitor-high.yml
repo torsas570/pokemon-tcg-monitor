@@ -2,7 +2,8 @@ name: Monitor Pokemon TCG HIGH (cases) - cada 5 min
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    # Cada 5 min en minutos "raros" para esquivar la congestión del :00 (donde Actions más se retrasa).
+    - cron: '3,8,13,18,23,28,33,38,43,48,53,58 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -23,7 +24,14 @@ jobs:
       - env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python3 monitor.py --priority high
+        # Bucle interno: 6 pasadas por run (~1 comprobación/min) para cubrir el hueco
+        # entre crons y no depender de que Actions arranque el schedule puntual.
+        run: |
+          for i in $(seq 1 6); do
+            echo "== Pasada $i/6 =="
+            python3 monitor.py --priority high || echo "Pasada $i falló, continúo con la siguiente"
+            if [ "$i" -lt 6 ]; then sleep 50; fi
+          done
       - uses: actions/cache/save@v5
         if: always()
         with:
