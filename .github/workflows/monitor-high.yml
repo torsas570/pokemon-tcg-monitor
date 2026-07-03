@@ -1,14 +1,26 @@
-name: Monitor Pokemon TCG HIGH (cases) - cada 5 min
+name: Monitor Pokemon TCG - CONTINUO (~1 check/min, todas las tiendas)
 
 on:
-  schedule:
-    # Cada 5 min en minutos "raros" para esquivar la congestión del :00 (donde Actions más se retrasa).
-    - cron: '3,8,13,18,23,28,33,38,43,48,53,58 * * * *'
   workflow_dispatch:
+  schedule:
+    # Red de seguridad: si la cadena se rompe, esto rearranca el bucle.
+    # Minutos "raros" para esquivar la congestion del :00.
+    - cron: '7,37 * * * *'
+
+# Solo un bloque a la vez. El nuevo run espera a que acabe el actual (relevo
+# sin carrera del state.json). GitHub mantiene como mucho 1 corriendo + 1 en cola.
+concurrency:
+  group: monitor-continuo
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write   # necesario para que 'gh workflow run' relance el workflow
 
 jobs:
-  check:
+  loop:
     runs-on: ubuntu-latest
+    timeout-minutes: 350   # tope de 6h de Actions; salimos antes por tiempo del bucle
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -18,22 +30,35 @@ jobs:
       - uses: actions/cache/restore@v5
         with:
           path: state.json
-          # Clave única por run + restauración por prefijo (compartida con monitor.yml).
           key: monitor-state-${{ github.run_id }}
           restore-keys: monitor-state-
-      - env:
+
+      - name: Bucle continuo (~1 check/min durante ~5h30m)
+        env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        # Bucle interno: 6 pasadas por run (~1 comprobación/min) para cubrir el hueco
-        # entre crons y no depender de que Actions arranque el schedule puntual.
         run: |
-          for i in $(seq 1 6); do
-            echo "== Pasada $i/6 =="
-            python3 monitor.py --priority high || echo "Pasada $i falló, continúo con la siguiente"
-            if [ "$i" -lt 6 ]; then sleep 50; fi
+          # Bucle acotado por TIEMPO (no por nº de pasadas): corre ~5h30m y sale
+          # limpio para guardar estado y encadenar el siguiente bloque.
+          END=$(( $(date +%s) + 5*3600 + 30*60 ))
+          i=0
+          while [ "$(date +%s)" -lt "$END" ]; do
+            i=$((i+1))
+            echo "== Pasada $i =="
+            python3 monitor.py || echo "Pasada $i fallo, continuo con la siguiente"
+            sleep 45
           done
-      - uses: actions/cache/save@v5
+          echo "Bloque terminado tras $i pasadas."
+
+      - name: Guardar estado
         if: always()
+        uses: actions/cache/save@v5
         with:
           path: state.json
           key: monitor-state-${{ github.run_id }}
+
+      - name: Encadenar el siguiente bloque (auto-relanzado)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run monitor-high.yml --ref master

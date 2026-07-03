@@ -1,8 +1,11 @@
 name: Monitor Pokemon TCG 30 Aniversario
 
 on:
-  schedule:
-    - cron: '*/15 * * * *'  # Cada 15 minutos
+  # Cron DESACTIVADO: el monitor continuo (monitor-high.yml) ya vigila TODAS las
+  # tiendas cada ~1 min. Dejar este cron activo duplicaria el trabajo y competiria
+  # por el state.json cacheado. Se mantiene lanzable a mano.
+  # schedule:
+  #   - cron: '*/15 * * * *'
   workflow_dispatch:
   push:
     branches: [master, main]
