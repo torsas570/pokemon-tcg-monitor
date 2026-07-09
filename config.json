@@ -452,8 +452,9 @@
             "priority": "medium"
         },
         {
+            "_comment": "CERRADA 9-jul-2026: el dueño puso contraseña al storefront ('temporally, to upgrade my website and card lists') y vende por Instagram. Todo da 401, no hay handle que valga. Se deja la entrada como DETECTOR DE REAPERTURA: el aviso de salud ya la marcó caída y mandará '✅ vuelve a responder' en cuanto quite la contraseña. Se apunta a 'collections/all' (handle que existe siempre en Shopify) en vez de 'japanesepokemonboxes': si reabre con las colecciones renombradas tras el rediseño, un 404 la dejaría fallando en silencio, porque el flag 'alerted' ya está puesto y no se repite el aviso.",
             "name": "KrystalKollectz (JP)",
-            "url": "https://krystalkollectz.com/collections/japanesepokemonboxes/products.json?limit=250",
+            "url": "https://krystalkollectz.com/collections/all/products.json?limit=250",
             "type": "api",
             "priority": "medium"
         },
