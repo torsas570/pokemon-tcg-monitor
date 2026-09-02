@@ -93,7 +93,8 @@
   "max_workers": 12,
   "request_timeout_seconds": 20,
   "max_alerts_per_site": 20,
-  "health_fail_threshold": 3,
+  "health_fail_threshold": 10,
+  "health_digest_cooldown_minutes": 30,
   "health_empty_threshold": 5,
   "_comment_producto": "Prioridad de PRODUCTO dentro de un aviso. Los 'top' se marcan 🔥 y van SIEMPRE los primeros; los 'high_value' 🚨. Evita que una booster box se caiga del corte de max_alerts_per_site por detrás de un llavero.",
   "top_priority_keywords": [

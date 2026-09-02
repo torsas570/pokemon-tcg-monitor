@@ -47,8 +47,10 @@ STATE_PATH = BASE_DIR / "state.json"
 PRIORITY_EMOJI = {"high": "🚨", "medium": "📦", "low": "🔍"}
 OOS_KEYWORDS = ["agotado", "sold out", "out of stock", "vendido", "no disponible", "rupture de stock"]
 HEALTH_KEY = "__health__"  # clave reservada en state para la salud de las tiendas (no es un sitio)
-DEFAULT_HEALTH_FAIL_THRESHOLD = 3  # fallos seguidos antes de avisar de posible bloqueo/caída
+HEALTH_META_KEY = "__health_meta__"  # clave reservada: control del resumen de salud
+DEFAULT_HEALTH_FAIL_THRESHOLD = 10  # fallos seguidos antes de avisar (~10 min a 1 pasada/min)
 DEFAULT_EMPTY_THRESHOLD = 5        # pasadas a 0 productos (habiendo tenido catálogo) antes de avisar
+DEFAULT_DIGEST_COOLDOWN_MIN = 30   # minutos mínimos entre dos resúmenes de salud
 DEFAULT_MAX_WORKERS = 12           # peticiones simultáneas
 DEFAULT_TIMEOUT = 20               # segundos por petición
 DEFAULT_MAX_ALERTS = 20            # productos como mucho por aviso de tienda
@@ -100,53 +102,88 @@ def _record_health(state, name, ok, error=None, n_products=None):
         h["last_error"] = error
 
 
+def _fmt_store_list(names, limit=10):
+    """Lista compacta separada por · y recortada, para no llenar la pantalla."""
+    shown = names[:limit]
+    extra = len(names) - len(shown)
+    txt = " · ".join(shown)
+    return txt + (f" <i>y {extra} más</i>" if extra else "")
+
+
 def _collect_health_alerts(state, config):
-    """Devuelve [(mensaje, deshacer)] SOLO en las transiciones (cae -> avisa /
-    se recupera -> avisa), para no repetir el aviso en cada pasada. Muta los flags
-    en el state; `deshacer` los restaura si el envío a Telegram falla, para que el
-    aviso se reintente en la próxima pasada en vez de perderse."""
+    """Devuelve (mensajes, deshacer): como mucho UN resumen por pasada.
+
+    Antes salía un mensaje por tienda y por transición. Con 118 tiendas, un bache
+    de red del runner producía decenas de mensajes de caída y otras tantas de
+    recuperación, y entre ese ruido se perdía un restock de verdad. Ahora todas
+    las transiciones de la pasada se agrupan en un único mensaje, que además va
+    en silencio (sin notificación en el móvil) y con un tiempo mínimo entre
+    resúmenes. `deshacer` restaura los flags si el envío falla, para que el aviso
+    se reintente en vez de perderse.
+    """
     threshold = config.get("health_fail_threshold", DEFAULT_HEALTH_FAIL_THRESHOLD)
     empty_threshold = config.get("health_empty_threshold", DEFAULT_EMPTY_THRESHOLD)
+    cooldown = config.get("health_digest_cooldown_minutes", DEFAULT_DIGEST_COOLDOWN_MIN) * 60
     health = state.get(HEALTH_KEY, {})
-    out = []
+    meta = state.setdefault(HEALTH_META_KEY, {})
+
+    caidas, recuperadas, ciegas, vuelven = [], [], [], []
+    restores = []
 
     def flip(h, key, value):
         prev = h.get(key)
+        restores.append(lambda: h.__setitem__(key, prev))
         h[key] = value
-        return lambda: h.__setitem__(key, prev)
 
-    for name, h in health.items():
+    for name, h in sorted(health.items()):
         fails = h.get("fails", 0)
         if fails >= threshold and not h.get("alerted", False):
-            out.append((
-                f"⚠️ <b>Aviso de monitor</b>\n\n"
-                f"<b>{name}</b> no responde tras {fails} intentos seguidos "
-                f"(posible bloqueo de IP o caída de la web).\n"
-                f"⚠️ Puede que te estés perdiendo restocks de esta tienda.\n"
-                f"Último error: <code>{h.get('last_error')}</code>",
-                flip(h, "alerted", True),
-            ))
+            flip(h, "alerted", True)
+            caidas.append(name)
         elif fails == 0 and h.get("alerted", False):
-            out.append((f"✅ <b>{name}</b> vuelve a responder con normalidad.",
-                        flip(h, "alerted", False)))
+            flip(h, "alerted", False)
+            recuperadas.append(name)
 
-        # Tienda CIEGA: responde OK pero lleva N pasadas devolviendo 0 productos
-        # habiendo tenido catálogo antes.
         empty = h.get("empty_streak", 0)
         if empty >= empty_threshold and not h.get("empty_alerted", False):
-            out.append((
-                f"👻 <b>Aviso de monitor</b>\n\n"
-                f"<b>{name}</b> responde correctamente pero lleva {empty} pasadas "
-                f"devolviendo <b>0 productos</b> (antes llegó a tener "
-                f"{h.get('max_products', 0)}).\n"
-                f"⚠️ Probablemente la colección se renombró o la tienda ya no la sirve: "
-                f"está CIEGA, no te avisará de nada. Revisa la URL en config.json.",
-                flip(h, "empty_alerted", True),
-            ))
+            flip(h, "empty_alerted", True)
+            ciegas.append((name, h.get("max_products", 0), empty))
         elif empty == 0 and h.get("empty_alerted", False):
-            out.append((f"✅ <b>{name}</b> vuelve a devolver productos.",
-                        flip(h, "empty_alerted", False)))
-    return out
+            flip(h, "empty_alerted", False)
+            vuelven.append(name)
+
+    def deshacer():
+        for r in restores:
+            r()
+
+    if not (caidas or recuperadas or ciegas or vuelven):
+        return [], deshacer
+
+    # Una tienda CIEGA es pérdida de datos silenciosa y es rara: se salta la espera.
+    # Las caídas y recuperaciones son ruido de mantenimiento y sí la respetan.
+    ahora = time.time()
+    if not ciegas and ahora - meta.get("last_digest", 0) < cooldown:
+        deshacer()
+        return [], (lambda: None)
+
+    n_total = len(health)
+    lineas = []
+    if ciegas:
+        for name, best, streak in ciegas:
+            lineas.append(f"👻 <b>{name}</b>: responde OK pero lleva {streak} pasadas a "
+                          f"<b>0 productos</b> (tenía {best}). Revisa la URL en config.json.")
+    if caidas:
+        cabecera = f"⚠️ <b>{len(caidas)} tiendas no responden</b>"
+        if n_total and len(caidas) >= max(5, n_total // 3):
+            cabecera += " — son muchas a la vez, probablemente sea la red del runner"
+        lineas.append(f"{cabecera}\n{_fmt_store_list(caidas)}")
+    if recuperadas:
+        lineas.append(f"✅ <b>Recuperadas ({len(recuperadas)})</b>: {_fmt_store_list(recuperadas)}")
+    if vuelven:
+        lineas.append(f"✅ <b>Vuelven a dar productos</b>: {_fmt_store_list(vuelven)}")
+
+    flip(meta, "last_digest", ahora)
+    return ["\n\n".join(lineas)], deshacer
 
 
 def build_headers(user_agent, is_api=False):
@@ -281,7 +318,7 @@ def extract_products_api(data, base_url=""):
     return products
 
 
-def send_telegram(bot_token, chat_id, message, attempts=4):
+def send_telegram(bot_token, chat_id, message, attempts=4, silent=False):
     """Envía un mensaje y devuelve True/False según haya salido.
 
     Devolver el resultado es lo que permite NO dar por avisado un producto cuyo
@@ -291,6 +328,10 @@ def send_telegram(bot_token, chat_id, message, attempts=4):
     """
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": False}
+    if silent:
+        # Los avisos de salud llegan al chat pero NO hacen sonar el móvil: así el
+        # ruido de mantenimiento no compite con un restock de verdad.
+        payload["disable_notification"] = True
     for attempt in range(attempts):
         try:
             resp = requests.post(url, json=payload, timeout=20)
@@ -553,10 +594,11 @@ def run_once(priority_filter=None):
             log.error(f"{name}: aviso NO enviado -> no se marca como visto, "
                       f"se reintenta en la próxima pasada")
 
-    # --- 4) Avisos de SALUD (caídas y tiendas ciegas): solo en las transiciones ---
-    for msg, deshacer in _collect_health_alerts(state, config):
-        if not send_telegram(bot_token, chat_id, msg):
-            deshacer()
+    # --- 4) Salud (caídas y tiendas ciegas): UN resumen, y en silencio ---
+    health_msgs, deshacer_salud = _collect_health_alerts(state, config)
+    for msg in health_msgs:
+        if not send_telegram(bot_token, chat_id, msg, silent=True):
+            deshacer_salud()
 
     save_state(state)
     if not n_alertas:
