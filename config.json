@@ -1,766 +1,917 @@
 {
-    "telegram_bot_token": "USE_GITHUB_SECRET",
-    "telegram_chat_id": "USE_GITHUB_SECRET",
-    "check_interval_minutes": 15,
-    "check_interval_high_minutes": 5,
-    "notify_only_in_stock": true,
-    "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "required_keywords": [
-        "pokemon day 2026",
-        "pokémon day 2026",
-        "pokemon day collection",
-        "pokémon day collection",
-        "30th anniversary",
-        "30 aniversario",
-        "30 anniversary",
-        "30 aniv",
-        "30th aniv",
-        "30th celebration",
-        "30 celebration",
-        "30.º aniversario",
-        "first partner illustration",
-        "eternals",
-        "eternos",
-        "espeon & umbreon",
-        "espeon y umbreon",
-        "premium deck set",
-        "30周年",
-        "セレブレーション",
-        "ポケモンデイ"
-    ],
-    "_comment_exclude": "Idiomas que NO interesan (solo ES/EN/JP). Si un título contiene alguno, se descarta aunque matchee 30 aniv.",
-    "exclude_keywords": [
-        "(ita)",
-        "[ita]",
-        "italiano",
-        "italian",
-        "[it]",
-        "(it)",
-        "deutsch",
-        "german",
-        "[de]",
-        "(de)",
-        "français",
-        "francais",
-        "french",
-        "[fr]",
-        "(fr)",
-        "korean",
-        "[kr]",
-        "한국",
-        "chinese",
-        "[chn]",
-        "(chn)",
-        "[cn]",
-        "(cn)",
-        "[s-chn]",
-        "[t-chn]",
-        "s-chinese",
-        "t-chinese",
-        "simplified chinese",
-        "traditional chinese",
-        "中文",
-        "简体",
-        "繁體",
-        "português",
-        "portugues",
-        "[pt]",
-        "nederlands",
-        "dutch",
-        "[nl]",
-        "yu-gi-oh",
-        "yugioh",
-        "yu gi oh",
-        "duel monsters",
-        "konami",
-        "jurassic",
-        "panini",
-        "digimon",
-        "one piece",
-        "dragon ball",
-        "gundam",
-        "lorcana",
-        "weiss",
-        "vanguard",
-        "metazoo",
-        "flesh and blood",
-        "riftbound"
-    ],
-    "_comment_high": "=== PRIORITY HIGH — CASES & TIENDAS CON PREVENTA 30 ANIV ===",
-    "sites": [
-        {
-            "_comment": "=== FEEDS DE PREVENTA/RESERVA 30 ANIV (lo primero que avisa de reservas nuevas) ===",
-            "_comment2": "Pokemillon es Shopify: products.json en vez de scrapear HTML. El handle real no lleva el 'º'.",
-            "name": "Pokemillon (Eternals 30 Aniv)",
-            "url": "https://www.pokemillon.com/collections/eternos-30-aniversario-eternals-30th-anniversary/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Pokemillon (Reservas)",
-            "url": "https://www.pokemillon.com/collections/reservas/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Pokemillon (Novedades)",
-            "url": "https://www.pokemillon.com/collections/novedades/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "_comment": "=== Sunny Store (Shopify ES). El 30th CELEBRATION es set japonés → JP en high. ===",
-            "name": "Sunny Store (Cajas Pokémon JAP)",
-            "url": "https://sunnystore.es/collections/cajas-japones-pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Sunny Store (Sobres Pokémon JAP)",
-            "url": "https://sunnystore.es/collections/sobres-japones-pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Sunny Store (Pokémon JAP)",
-            "url": "https://sunnystore.es/collections/japones-pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "_comment": "=== TIENDAS UE (envían a España, sin aduanas) — cobertura a futuro 30 aniv ===",
-            "name": "Poke-Power.eu (30 Aniv)",
-            "url": "https://poke-power.eu/en/collections/all/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "SmileCards (30 Aniv)",
-            "url": "https://smilecards.store/en/collections/all/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "_comment": "=== INTERNACIONALES SELLADO (Shopify, envían a España) — inglés prioritario ===",
-            "name": "Otakura (IT)",
-            "url": "https://otakura.com/en/collections/display-buste-pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "RelicTCG (FR)",
-            "url": "https://www.relictcg.com/collections/pokemon-display-boosters/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "TCGStore.se (SE)",
-            "url": "https://tcgstore.se/en/collections/pokemon-display-booster-box/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Monster Card Corner (UK)",
-            "url": "https://monstercardcorner.co.uk/collections/new-pokemon-releases/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Pixel and Block (UK)",
-            "url": "https://pixelandblock.co.uk/collections/pokemon-tcg/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Pokemon Plug (US)",
-            "url": "https://pokemonplug.com/collections/pokemon-booster-boxes/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Poke-Collect (US)",
-            "url": "https://poke-collect.com/collections/pokemon-sealed-products/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Kantocards (Preventas)",
-            "url": "https://kantocards.com/collections/preventas-pokemon",
-            "type": "html",
-            "priority": "high",
-            "selector": ".product-card, .card-wrapper, .grid__item",
-            "title_selector": ".product-card-title, .card__heading, h3",
-            "link_selector": "a[href*='/products/']",
-            "price_selector": ".price, .price-item"
-        },
-        {
-            "name": "Factory Cards (Reservas)",
-            "url": "https://factorycardstcg.com/collections/reservas-tcg-preventa-pokemon-one-piece-y-mas/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Pokezilla (Preventas)",
-            "url": "https://pokezilla.com/collections/preventas/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Reino de Cartas (Preventa)",
-            "url": "https://reinodecartas.com/wp-json/wc/store/v1/products?per_page=50&search=30%20anniversary&orderby=date",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "LegendaryCards.eu (Cases)",
-            "url": "https://www.legendarycards.eu/pokemon/sealed-cases/",
-            "type": "html",
-            "priority": "high",
-            "selector": ".product",
-            "title_selector": "a.title",
-            "link_selector": "a.title",
-            "price_selector": ".left"
-        },
-        {
-            "name": "TCG Corner (Pokémon Cases)",
-            "url": "https://tcg-corner.com/collections/pokemon-case-box/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "_comment": "collections/all tiene 393 productos y products.json se capa a 250; estas colecciones son más estrechas y no truncan.",
-            "name": "MHDealsPlus (30th Celebration)",
-            "url": "https://mhdealsplus.com/collections/pokemon-30th-anniversary/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "MHDealsPlus (Sealed Cases)",
-            "url": "https://mhdealsplus.com/collections/sealed-cases/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Cash Cards Unlimited",
-            "url": "https://cashcardsunlimited.com/collections/pokemon-sealed-product?sort_by=created-descending",
-            "type": "html",
-            "priority": "high",
-            "selector": ".grid-product, .product-card, .card-wrapper",
-            "title_selector": ".grid-product__title, .product-card-title, .card__heading, h3",
-            "link_selector": ".grid-product__link, a[href*='/products/']",
-            "price_selector": ".grid-product__price, .price, .price-item"
-        },
-        {
-            "name": "TCGStadium",
-            "url": "https://tcg-stadium.com/collections/english-sealed-products?sort_by=created-descending",
-            "type": "html",
-            "priority": "high",
-            "selector": ".product-card, .card-wrapper, .grid__item",
-            "title_selector": ".product-card-title, .card__heading",
-            "link_selector": "a[href*='/products/']",
-            "price_selector": ".price, .price-item"
-        },
-        {
-            "_comment": "=== PRIORITY MEDIUM — ESPAÑA, BOXES Y ETB ===",
-            "name": "Pokemillon (Cajas de Sobres)",
-            "url": "https://www.pokemillon.com/collections/cajas-de-sobres/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Sunny Store (Cajas Pokémon ESP)",
-            "url": "https://sunnystore.es/collections/pokemon-cajas-espanol/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Sunny Store (Cajas Pokémon ENG)",
-            "url": "https://sunnystore.es/collections/cajas-ingles-pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Sunny Store (Sobres Pokémon ESP)",
-            "url": "https://sunnystore.es/collections/sobres-espanol-pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Sunny Store (Sobres Pokémon ENG)",
-            "url": "https://sunnystore.es/collections/sobres-pokemon-ingles/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "TodoHits",
-            "url": "https://todohits.com/collections/pokemon?sort_by=created-descending",
-            "type": "html",
-            "priority": "medium",
-            "selector": ".product-card, .card-wrapper, .grid__item",
-            "title_selector": ".product-card-title, .card__heading, h3",
-            "link_selector": "a[href*='/products/']",
-            "price_selector": ".price, .price-item"
-        },
-        {
-            "name": "Pokezilla (Catálogo)",
-            "url": "https://pokezilla.com/collections/all/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "PokedealTCG",
-            "url": "https://www.pokedealtcg.es/collections/todos-los-sellados?sort_by=created-descending",
-            "type": "html",
-            "priority": "medium",
-            "selector": ".product-card, .card-wrapper, .grid__item",
-            "title_selector": ".product-card-title, .card__heading, h3",
-            "link_selector": "a[href*='/products/']",
-            "price_selector": ".price, .price-item"
-        },
-        {
-            "name": "JJ Collection",
-            "url": "https://www.jjcollection.es/collections/pokemon-tcg-booster-box?sort_by=created-descending",
-            "type": "html",
-            "priority": "medium",
-            "selector": ".product-card, .card-wrapper, .grid__item",
-            "title_selector": ".product-card-title, .card__heading, h3",
-            "link_selector": "a[href*='/products/']",
-            "price_selector": ".price, .price-item"
-        },
-        {
-            "name": "Kantocards",
-            "url": "https://kantocards.com/collections/booster-boxes?sort_by=created-descending",
-            "type": "html",
-            "priority": "medium",
-            "selector": ".product-card, .card-wrapper, .grid__item",
-            "title_selector": ".product-card-title, .card__heading, h3",
-            "link_selector": "a[href*='/products/']",
-            "price_selector": ".price, .price-item"
-        },
-        {
-            "name": "Pokewoke",
-            "url": "https://pokewoke.store/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Factory Cards (Pokémon)",
-            "url": "https://factorycardstcg.com/collections/comprarcartaspokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Isekai Alcorcon",
-            "url": "https://isekai-alcorcon.es/es/c/juegos-tcg/6",
-            "type": "html",
-            "priority": "medium",
-            "selector": ".product-miniature",
-            "title_selector": ".product-title",
-            "link_selector": "a",
-            "price_selector": ".price"
-        },
-        {
-            "name": "Dungeon Marvels",
-            "url": "https://dungeonmarvels.com/188-pokemon",
-            "type": "html",
-            "priority": "medium",
-            "selector": ".product-miniature",
-            "title_selector": ".product-title",
-            "link_selector": "a",
-            "price_selector": ".price"
-        },
-        {
-            "name": "Distrito Zero",
-            "url": "https://distritozero.es/categoria/61-pokemon-tcg-113",
-            "type": "html",
-            "priority": "medium",
-            "selector": ".product-miniature",
-            "title_selector": ".product-title",
-            "link_selector": "a",
-            "price_selector": ".price"
-        },
-        {
-            "name": "La Cueva Roja",
-            "url": "https://lacuevaroja.com/pokemon-tcg",
-            "type": "html",
-            "priority": "medium",
-            "selector": "#js-product-list .product-miniature",
-            "title_selector": ".product-title",
-            "link_selector": "a",
-            "price_selector": ".price"
-        },
-        {
-            "name": "La Escotilla (Pokémon)",
-            "url": "https://laescotillajuegos.com/collections/pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "CardCrack",
-            "url": "https://cardcrack.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "The Golden Rabbit",
-            "url": "https://thegoldenrabbitshop.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Asturcards",
-            "url": "https://www.asturcards.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "_comment": "cartas-pokemon-tcg tiene 414 productos (se capa a 250). Se trocea en colecciones que no truncan.",
-            "name": "CardZone (Pokemon Day 2026)",
-            "url": "https://cardzone.es/collections/pokemon-day/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "CardZone (Cajas de Sobres)",
-            "url": "https://cardzone.es/collections/cajas-de-sobres/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "CardZone (Novedades)",
-            "url": "https://cardzone.es/collections/novedades/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "_comment": "=== SUIZA + IMPORT JAPÓN (Shopify, envían a España; ojo aduanas/IVA) ===",
-            "name": "LaschoCards (CH)",
-            "url": "https://laschocards.ch/en/collections/pokemon-tcg-displays-und-boxen/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "TCGHOBBY (TW)",
-            "url": "https://www.tcghobby.com/collections/new-release-pokemon-tcg/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "PokeUnlimited (JP)",
-            "url": "https://pokeunlimited.com/collections/pokemon-japanese-booster-boxes/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "_comment": "CERRADA 9-jul-2026: el dueño puso contraseña al storefront ('temporally, to upgrade my website and card lists') y vende por Instagram. Todo da 401, no hay handle que valga. Se deja la entrada como DETECTOR DE REAPERTURA: el aviso de salud ya la marcó caída y mandará '✅ vuelve a responder' en cuanto quite la contraseña. Se apunta a 'collections/all' (handle que existe siempre en Shopify) en vez de 'japanesepokemonboxes': si reabre con las colecciones renombradas tras el rediseño, un 404 la dejaría fallando en silencio, porque el flag 'alerted' ya está puesto y no se repite el aviso.",
-            "name": "KrystalKollectz (JP)",
-            "url": "https://krystalkollectz.com/collections/all/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "_comment": "=== AMPLIACIÓN 30 ANIV — HIGH: PREVENTAS/COMING SOON (Shopify, sin lotería, envían a España) ===",
-            "name": "Madrid Norte TCG (Preventas)",
-            "url": "https://madridnortetcg.com/collections/preventas-tcg/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Pokejotta (Pre-ventas, PT/ES)",
-            "url": "https://pokejotta.com/collections/pre-orders/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "CardTreasure (Preorders, CH EN/JP)",
-            "url": "https://cardtreasure.ch/collections/preorders/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "SparkLeaf (Pre-Order, CH)",
-            "url": "https://sparkleaf.ch/collections/pokemon-one-piece-tcg-pre-order-deals/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "JapHunter (Preorder JP, CH)",
-            "url": "https://japhunter.ch/collections/preorder/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Eterna Cards (Coming Soon, UK)",
-            "url": "https://eternacards.co.uk/collections/pokemon-tcg-coming-soon/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Asmodee UK (Coming Soon)",
-            "url": "https://asmodee.co.uk/collections/pokemon-tcg-coming-soon/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "Aquitaz (30th Anniversary, SE)",
-            "url": "https://aquitaz.se/collections/pokemon-tcg-30th-anniversary/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "name": "The Card Vault (Pre-Orders, UK)",
-            "url": "https://thecardvault.co.uk/collections/pokemon-pre-orders/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        },
-        {
-            "_comment": "=== AMPLIACIÓN 30 ANIV — MEDIUM: ESPAÑA (Shopify) ===",
-            "name": "Ikigai Comics (ES)",
-            "url": "https://ikigaicomicstienda.com/collections/pokemon-tcg/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "El Duelista (ES)",
-            "url": "https://elduelista.com/collections/pok-mon-display/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "FreakCorp (ES)",
-            "url": "https://freakcorp.com/collections/pokemon-tcg/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "_comment": "=== AMPLIACIÓN 30 ANIV — MEDIUM: EUROPA (Shopify, EN + JP, envían a España) ===",
-            "name": "CardTreasure (Sellado, CH)",
-            "url": "https://cardtreasure.ch/collections/sealed-pokemon-products/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "SparkLeaf (Pokémon TCG, CH)",
-            "url": "https://sparkleaf.ch/collections/pokemon-tcg/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Ryu.land (CH)",
-            "url": "https://ryu.land/collections/pkm-booster-box/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "JapHunter (JP Boxes, CH)",
-            "url": "https://japhunter.ch/collections/japanese-booster-box/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "BaruzCard (IT)",
-            "url": "https://baruzcard.it/collections/booster-box/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "PokeCardsStore (IT)",
-            "url": "https://pokecardsstore.it/collections/pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Eterna Cards (Boxes, UK)",
-            "url": "https://eternacards.co.uk/collections/pokemon-booster-boxes/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Eterna Cards (JP, UK)",
-            "url": "https://eternacards.co.uk/collections/japanese-pokemon-cards-in-the-uk/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Japan2UK (JP Boxes)",
-            "url": "https://www.japan2uk.com/collections/pokemon-japanese-booster-boxes/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Japan2UK (EN Collection Boxes)",
-            "url": "https://www.japan2uk.com/collections/pokemon-english-collection-boxes/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Asmodee UK (New Releases)",
-            "url": "https://asmodee.co.uk/collections/pokemon-new-releases/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "The Card Vault (New Releases, UK)",
-            "url": "https://thecardvault.co.uk/collections/pokemon-new-releases/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "The Unpackables (NL)",
-            "url": "https://theunpackablestcg.nl/collections/booster-boxes/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Pokemonwinkel (NL)",
-            "url": "https://www.pokemonwinkel.nl/collections/booster-box/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Aquitaz (Booster Box, SE)",
-            "url": "https://aquitaz.se/collections/pokemon-booster-box/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Flipside Gaming (US)",
-            "url": "https://flipsidegaming.com/collections/pokemon-sealed/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "N4YTCG (US)",
-            "url": "https://www.n4ytcg.com/collections/pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Pokioh Shop (JP import)",
-            "url": "https://pokioh.shop/collections/pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "_comment": "=== AMPLIACIÓN 30 ANIV — MEDIUM: WooCommerce (ES/PT/FR/IT + import JP). Algunas pueden dar 403 desde GitHub Actions (Cloudflare); el monitor lo gestiona como warning. ===",
-            "name": "PokeDimension (ES)",
-            "url": "https://pokedimension.com/wp-json/wc/store/v1/products?per_page=100&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Sweet Cards Valencia (ES)",
-            "url": "https://sweetcardsvalencia.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "HoloPlaza TCG (ES)",
-            "url": "https://holoplazatcg.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Manavortex (ES)",
-            "url": "https://manavortex.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Esfantasia (ES)",
-            "url": "https://esfantasia.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Arena Games (ES)",
-            "url": "https://arenagames.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Micelion Games (ES)",
-            "url": "https://miceliongames.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "TopDeck (ES)",
-            "url": "https://topdeck.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "ELIUS (ES)",
-            "url": "https://eliusweb.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Mono de Juegos (ES)",
-            "url": "https://monodejuegos.shop/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "KuriGames (ES)",
-            "url": "https://kurigames.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "TCG Portugal (PT)",
-            "url": "https://tcgportugal.com/wp-json/wc/store/v1/products?per_page=100&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Pokuji (FR)",
-            "url": "https://pokuji.fr/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Pokelite (FR)",
-            "url": "https://www.pokelite.fr/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "TCG-Store (IT)",
-            "url": "https://tcg-store.it/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "PokelandCY (CY)",
-            "url": "https://pokelandcy.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "The Uncommon Shop (CH)",
-            "url": "https://theuncommonshop.ch/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Samurai Sword Tokyo (JP import)",
-            "url": "https://samuraiswordtokyo.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Evolution TCG (NL)",
-            "url": "https://evlutcg.com/collections/pokemon/products.json?limit=250",
-            "type": "api",
-            "priority": "medium"
-        },
-        {
-            "name": "Evolution TCG Pre-Orders (NL)",
-            "url": "https://evlutcg.com/collections/pokemon-pre-orders/products.json?limit=250",
-            "type": "api",
-            "priority": "high"
-        }
-    ]
+  "telegram_bot_token": "USE_GITHUB_SECRET",
+  "telegram_chat_id": "USE_GITHUB_SECRET",
+  "check_interval_minutes": 15,
+  "check_interval_high_minutes": 5,
+  "notify_only_in_stock": true,
+  "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "required_keywords": [
+    "pokemon day 2026",
+    "pokémon day 2026",
+    "pokemon day collection",
+    "pokémon day collection",
+    "30th anniversary",
+    "30 aniversario",
+    "30 anniversary",
+    "30 aniv",
+    "30th aniv",
+    "30th celebration",
+    "30 celebration",
+    "30.º aniversario",
+    "first partner illustration",
+    "eternals",
+    "eternos",
+    "espeon & umbreon",
+    "espeon y umbreon",
+    "premium deck set",
+    "30周年",
+    "セレブレーション",
+    "ポケモンデイ",
+    "first partner japanese",
+    "partner illustration",
+    "futuristic collection",
+    "futuristic box"
+  ],
+  "_comment_exclude": "Idiomas que NO interesan (solo ES/EN/JP). Si un título contiene alguno, se descarta aunque matchee 30 aniv.",
+  "exclude_keywords": [
+    "(ita)",
+    "[ita]",
+    "italiano",
+    "italian",
+    "[it]",
+    "(it)",
+    "deutsch",
+    "german",
+    "[de]",
+    "(de)",
+    "français",
+    "francais",
+    "french",
+    "[fr]",
+    "(fr)",
+    "korean",
+    "[kr]",
+    "한국",
+    "chinese",
+    "[chn]",
+    "(chn)",
+    "[cn]",
+    "(cn)",
+    "[s-chn]",
+    "[t-chn]",
+    "s-chinese",
+    "t-chinese",
+    "simplified chinese",
+    "traditional chinese",
+    "中文",
+    "简体",
+    "繁體",
+    "português",
+    "portugues",
+    "[pt]",
+    "nederlands",
+    "dutch",
+    "[nl]",
+    "yu-gi-oh",
+    "yugioh",
+    "yu gi oh",
+    "duel monsters",
+    "konami",
+    "jurassic",
+    "panini",
+    "digimon",
+    "one piece",
+    "dragon ball",
+    "gundam",
+    "lorcana",
+    "weiss",
+    "vanguard",
+    "metazoo",
+    "flesh and blood",
+    "riftbound"
+  ],
+  "max_workers": 12,
+  "request_timeout_seconds": 20,
+  "max_alerts_per_site": 20,
+  "health_fail_threshold": 3,
+  "health_empty_threshold": 5,
+  "_comment_producto": "Prioridad de PRODUCTO dentro de un aviso. Los 'top' se marcan 🔥 y van SIEMPRE los primeros; los 'high_value' 🚨. Evita que una booster box se caiga del corte de max_alerts_per_site por detrás de un llavero.",
+  "top_priority_keywords": [
+    "ultra premium collection",
+    "ultra-premium collection",
+    "ultra premium",
+    "ultra-premium",
+    "booster box",
+    "booster case",
+    "sealed case",
+    "case box",
+    "display box",
+    "caja de sobres",
+    "caja sellada",
+    "caja de displays",
+    "display de sobres",
+    "booster display",
+    "bloster box",
+    "] case",
+    "caja 20 sobres",
+    "caja de 20 sobres",
+    "caja 10 sobres",
+    "caja 24 sobres",
+    "caja 30 sobres",
+    "caja 36 sobres"
+  ],
+  "high_value_keywords": [
+    "elite trainer box",
+    "elite trainer",
+    "etb",
+    "premium collection",
+    "premium deck",
+    "caja élite",
+    "caja elite",
+    "entrenador élite",
+    "entrenador elite",
+    "super premium",
+    "super-premium",
+    "special collection",
+    "tech sticker collection",
+    "futuristic collection",
+    "futuristic box"
+  ],
+  "_comment_high": "=== PRIORITY HIGH — CASES & TIENDAS CON PREVENTA 30 ANIV ===",
+  "sites": [
+    {
+      "_comment": "=== FEEDS DE PREVENTA/RESERVA 30 ANIV (lo primero que avisa de reservas nuevas) ===",
+      "_comment2": "Pokemillon es Shopify: products.json en vez de scrapear HTML. El handle real no lleva el 'º'.",
+      "name": "Pokemillon (Eternals 30 Aniv)",
+      "url": "https://www.pokemillon.com/collections/eternos-30-aniversario-eternals-30th-anniversary/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Pokemillon (Reservas)",
+      "url": "https://www.pokemillon.com/collections/reservas/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Pokemillon (Novedades)",
+      "url": "https://www.pokemillon.com/collections/novedades/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "_comment": "=== Sunny Store (Shopify ES). El 30th CELEBRATION es set japonés → JP en high. ===",
+      "name": "Sunny Store (Cajas Pokémon JAP)",
+      "url": "https://sunnystore.es/collections/cajas-japones-pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Sunny Store (Sobres Pokémon JAP)",
+      "url": "https://sunnystore.es/collections/sobres-japones-pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Sunny Store (Pokémon JAP)",
+      "url": "https://sunnystore.es/collections/japones-pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "_comment": "=== TIENDAS UE (envían a España, sin aduanas) — cobertura a futuro 30 aniv ===",
+      "name": "Poke-Power.eu (30 Aniv)",
+      "url": "https://poke-power.eu/en/collections/all/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "SmileCards (30 Aniv)",
+      "url": "https://smilecards.store/en/collections/all/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "_comment": "=== INTERNACIONALES SELLADO (Shopify, envían a España) — inglés prioritario ===",
+      "name": "Otakura (IT)",
+      "url": "https://otakura.com/en/collections/display-buste-pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "RelicTCG (FR)",
+      "url": "https://www.relictcg.com/collections/pokemon-display-boosters/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "TCGStore.se (SE)",
+      "url": "https://tcgstore.se/en/collections/pokemon-display-booster-box/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Monster Card Corner (UK)",
+      "url": "https://monstercardcorner.co.uk/collections/new-pokemon-releases/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Pixel and Block (UK)",
+      "url": "https://pixelandblock.co.uk/collections/pokemon-tcg/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Pokemon Plug (US)",
+      "url": "https://pokemonplug.com/collections/pokemon-booster-boxes/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Poke-Collect (US)",
+      "url": "https://poke-collect.com/collections/pokemon-sealed-products/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Kantocards (Preventas)",
+      "url": "https://kantocards.com/collections/preventas-pokemon",
+      "type": "html",
+      "priority": "high",
+      "selector": ".product-card, .card-wrapper, .grid__item",
+      "title_selector": ".product-card-title, .card__heading, h3",
+      "link_selector": "a[href*='/products/']",
+      "price_selector": ".price, .price-item"
+    },
+    {
+      "name": "Factory Cards (Reservas)",
+      "url": "https://factorycardstcg.com/collections/reservas-tcg-preventa-pokemon-one-piece-y-mas/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Pokezilla (Preventas)",
+      "url": "https://pokezilla.com/collections/preventas/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Reino de Cartas (Pokémon)",
+      "url": "https://reinodecartas.com/wp-json/wc/store/v1/products?per_page=100&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "LegendaryCards.eu (Cases)",
+      "url": "https://www.legendarycards.eu/pokemon/sealed-cases/",
+      "type": "html",
+      "priority": "high",
+      "selector": ".product",
+      "title_selector": "a.title",
+      "link_selector": "a.title",
+      "price_selector": ".left"
+    },
+    {
+      "name": "TCG Corner (Pokémon Cases)",
+      "url": "https://tcg-corner.com/collections/pokemon-case-box/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "_comment": "collections/all tiene 393 productos y products.json se capa a 250; estas colecciones son más estrechas y no truncan.",
+      "name": "MHDealsPlus (30th Celebration)",
+      "url": "https://mhdealsplus.com/collections/pokemon-30th-anniversary/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "MHDealsPlus (Sealed Cases)",
+      "url": "https://mhdealsplus.com/collections/sealed-cases/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Cash Cards Unlimited",
+      "url": "https://cashcardsunlimited.com/collections/pokemon-sealed-product?sort_by=created-descending",
+      "type": "html",
+      "priority": "high",
+      "selector": ".grid-product, .product-card, .card-wrapper",
+      "title_selector": ".grid-product__title, .product-card-title, .card__heading, h3",
+      "link_selector": ".grid-product__link, a[href*='/products/']",
+      "price_selector": ".grid-product__price, .price, .price-item"
+    },
+    {
+      "name": "TCGStadium",
+      "url": "https://tcg-stadium.com/collections/english-sealed-products?sort_by=created-descending",
+      "type": "html",
+      "priority": "high",
+      "selector": ".product-card, .card-wrapper, .grid__item",
+      "title_selector": ".product-card-title, .card__heading",
+      "link_selector": "a[href*='/products/']",
+      "price_selector": ".price, .price-item"
+    },
+    {
+      "_comment": "=== PRIORITY MEDIUM — ESPAÑA, BOXES Y ETB ===",
+      "name": "Pokemillon (Cajas de Sobres)",
+      "url": "https://www.pokemillon.com/collections/cajas-de-sobres/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Sunny Store (Cajas Pokémon ESP)",
+      "url": "https://sunnystore.es/collections/pokemon-cajas-espanol/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Sunny Store (Cajas Pokémon ENG)",
+      "url": "https://sunnystore.es/collections/cajas-ingles-pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Sunny Store (Sobres Pokémon ESP)",
+      "url": "https://sunnystore.es/collections/sobres-espanol-pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Sunny Store (Sobres Pokémon ENG)",
+      "url": "https://sunnystore.es/collections/sobres-pokemon-ingles/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "TodoHits",
+      "url": "https://todohits.com/collections/pokemon?sort_by=created-descending",
+      "type": "html",
+      "priority": "medium",
+      "selector": ".product-card, .card-wrapper, .grid__item",
+      "title_selector": ".product-card-title, .card__heading, h3",
+      "link_selector": "a[href*='/products/']",
+      "price_selector": ".price, .price-item"
+    },
+    {
+      "name": "Pokezilla (Catálogo)",
+      "url": "https://pokezilla.com/collections/all/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "PokedealTCG",
+      "url": "https://www.pokedealtcg.es/collections/todos-los-sellados?sort_by=created-descending",
+      "type": "html",
+      "priority": "medium",
+      "selector": ".product-card, .card-wrapper, .grid__item",
+      "title_selector": ".product-card-title, .card__heading, h3",
+      "link_selector": "a[href*='/products/']",
+      "price_selector": ".price, .price-item"
+    },
+    {
+      "name": "JJ Collection",
+      "url": "https://www.jjcollection.es/collections/pokemon-tcg-booster-box?sort_by=created-descending",
+      "type": "html",
+      "priority": "medium",
+      "selector": ".product-card, .card-wrapper, .grid__item",
+      "title_selector": ".product-card-title, .card__heading, h3",
+      "link_selector": "a[href*='/products/']",
+      "price_selector": ".price, .price-item"
+    },
+    {
+      "name": "Kantocards",
+      "url": "https://kantocards.com/collections/booster-boxes?sort_by=created-descending",
+      "type": "html",
+      "priority": "medium",
+      "selector": ".product-card, .card-wrapper, .grid__item",
+      "title_selector": ".product-card-title, .card__heading, h3",
+      "link_selector": "a[href*='/products/']",
+      "price_selector": ".price, .price-item"
+    },
+    {
+      "name": "Pokewoke",
+      "url": "https://pokewoke.store/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Factory Cards (Pokémon)",
+      "url": "https://factorycardstcg.com/collections/comprarcartaspokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Isekai Alcorcon",
+      "url": "https://isekai-alcorcon.es/es/c/juegos-tcg/6",
+      "type": "html",
+      "priority": "medium",
+      "selector": ".product-miniature",
+      "title_selector": ".product-title",
+      "link_selector": "a",
+      "price_selector": ".price"
+    },
+    {
+      "name": "Dungeon Marvels",
+      "url": "https://dungeonmarvels.com/188-pokemon",
+      "type": "html",
+      "priority": "medium",
+      "selector": ".product-miniature",
+      "title_selector": ".product-title",
+      "link_selector": "a",
+      "price_selector": ".price"
+    },
+    {
+      "name": "Distrito Zero",
+      "url": "https://distritozero.es/categoria/61-pokemon-tcg-113",
+      "type": "html",
+      "priority": "medium",
+      "selector": ".product-miniature",
+      "title_selector": ".product-title",
+      "link_selector": "a",
+      "price_selector": ".price"
+    },
+    {
+      "name": "La Cueva Roja",
+      "url": "https://lacuevaroja.com/pokemon-tcg",
+      "type": "html",
+      "priority": "medium",
+      "selector": "#js-product-list .product-miniature",
+      "title_selector": ".product-title",
+      "link_selector": "a",
+      "price_selector": ".price"
+    },
+    {
+      "name": "La Escotilla (Pokémon)",
+      "url": "https://laescotillajuegos.com/collections/pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "CardCrack",
+      "url": "https://cardcrack.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "The Golden Rabbit",
+      "url": "https://thegoldenrabbitshop.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Asturcards",
+      "url": "https://www.asturcards.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "_comment": "cartas-pokemon-tcg tiene 414 productos (se capa a 250). Se trocea en colecciones que no truncan.",
+      "name": "CardZone (Pokemon Day 2026)",
+      "url": "https://cardzone.es/collections/pokemon-day/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "CardZone (Cajas de Sobres)",
+      "url": "https://cardzone.es/collections/cajas-de-sobres/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "CardZone (Novedades)",
+      "url": "https://cardzone.es/collections/novedades/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "_comment": "=== SUIZA + IMPORT JAPÓN (Shopify, envían a España; ojo aduanas/IVA) ===",
+      "name": "LaschoCards (CH)",
+      "url": "https://laschocards.ch/en/collections/pokemon-tcg-displays-und-boxen/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "TCGHOBBY (TW)",
+      "url": "https://www.tcghobby.com/collections/new-release-pokemon-tcg/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "PokeUnlimited (JP)",
+      "url": "https://pokeunlimited.com/collections/pokemon-japanese-booster-boxes/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "_comment": "CERRADA 9-jul-2026: el dueño puso contraseña al storefront ('temporally, to upgrade my website and card lists') y vende por Instagram. Todo da 401, no hay handle que valga. Se deja la entrada como DETECTOR DE REAPERTURA: el aviso de salud ya la marcó caída y mandará '✅ vuelve a responder' en cuanto quite la contraseña. Se apunta a 'collections/all' (handle que existe siempre en Shopify) en vez de 'japanesepokemonboxes': si reabre con las colecciones renombradas tras el rediseño, un 404 la dejaría fallando en silencio, porque el flag 'alerted' ya está puesto y no se repite el aviso.",
+      "name": "KrystalKollectz (JP)",
+      "url": "https://krystalkollectz.com/collections/all/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "_comment": "=== AMPLIACIÓN 30 ANIV — HIGH: PREVENTAS/COMING SOON (Shopify, sin lotería, envían a España) ===",
+      "name": "Madrid Norte TCG (Preventas)",
+      "url": "https://madridnortetcg.com/collections/preventas-tcg/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Pokejotta (Pre-ventas, PT/ES)",
+      "url": "https://pokejotta.com/collections/pre-orders/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "CardTreasure (Preorders, CH EN/JP)",
+      "url": "https://cardtreasure.ch/collections/preorders/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "SparkLeaf (Pre-Orders, CH)",
+      "url": "https://sparkleaf.ch/collections/pre-order/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "JapHunter (Preorder JP, CH)",
+      "url": "https://japhunter.ch/collections/preorder/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Eterna Cards (Coming Soon, UK)",
+      "url": "https://eternacards.co.uk/collections/pokemon-tcg-coming-soon/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Asmodee UK (Coming Soon)",
+      "url": "https://asmodee.co.uk/collections/pokemon-tcg-coming-soon/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Aquitaz (30th Anniversary, SE)",
+      "url": "https://aquitaz.se/collections/pokemon-tcg-30th-anniversary/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "The Card Vault (Todas las Preventas, UK)",
+      "url": "https://thecardvault.co.uk/collections/all-pre-order-items/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "_comment": "=== AMPLIACIÓN 30 ANIV — MEDIUM: ESPAÑA (Shopify) ===",
+      "name": "Ikigai Comics (ES)",
+      "url": "https://ikigaicomicstienda.com/collections/pokemon-tcg/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "El Duelista (ES)",
+      "url": "https://elduelista.com/collections/pok-mon-display/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "FreakCorp (ES)",
+      "url": "https://freakcorp.com/collections/pokemon-tcg/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "_comment": "=== AMPLIACIÓN 30 ANIV — MEDIUM: EUROPA (Shopify, EN + JP, envían a España) ===",
+      "name": "CardTreasure (Sellado, CH)",
+      "url": "https://cardtreasure.ch/collections/sealed-pokemon-products/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "SparkLeaf (Pokémon TCG, CH)",
+      "url": "https://sparkleaf.ch/collections/pokemon-tcg/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Ryu.land (CH)",
+      "url": "https://ryu.land/collections/pkm-booster-box/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "JapHunter (JP Boxes, CH)",
+      "url": "https://japhunter.ch/collections/japanese-booster-box/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "BaruzCard (IT)",
+      "url": "https://baruzcard.it/collections/booster-box/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "PokeCardsStore (IT)",
+      "url": "https://pokecardsstore.it/collections/pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Eterna Cards (Boxes, UK)",
+      "url": "https://eternacards.co.uk/collections/pokemon-booster-boxes/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Eterna Cards (JP, UK)",
+      "url": "https://eternacards.co.uk/collections/japanese-pokemon-cards-in-the-uk/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Japan2UK (JP Boxes)",
+      "url": "https://www.japan2uk.com/collections/pokemon-japanese-booster-boxes/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Japan2UK (EN Collection Boxes)",
+      "url": "https://www.japan2uk.com/collections/pokemon-english-collection-boxes/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Asmodee UK (New Releases)",
+      "url": "https://asmodee.co.uk/collections/pokemon-new-releases/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "The Card Vault (New Releases, UK)",
+      "url": "https://thecardvault.co.uk/collections/pokemon-new-releases/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "The Unpackables (NL)",
+      "url": "https://theunpackablestcg.nl/collections/booster-boxes/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Pokemonwinkel (NL)",
+      "url": "https://www.pokemonwinkel.nl/collections/booster-box/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Aquitaz (Booster Box, SE)",
+      "url": "https://aquitaz.se/collections/pokemon-booster-box/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Flipside Gaming (30th Celebration, US)",
+      "url": "https://flipsidegaming.com/collections/pokemon-30th-celebration-elite-trainer-boxes-more/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "N4YTCG (US)",
+      "url": "https://www.n4ytcg.com/collections/pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Pokioh Shop (JP import)",
+      "url": "https://pokioh.shop/collections/pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "_comment": "=== AMPLIACIÓN 30 ANIV — MEDIUM: WooCommerce (ES/PT/FR/IT + import JP). Algunas pueden dar 403 desde GitHub Actions (Cloudflare); el monitor lo gestiona como warning. ===",
+      "name": "PokeDimension (ES)",
+      "url": "https://pokedimension.com/wp-json/wc/store/v1/products?per_page=100&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Sweet Cards Valencia (ES)",
+      "url": "https://sweetcardsvalencia.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "HoloPlaza TCG (ES)",
+      "url": "https://holoplazatcg.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Manavortex (ES)",
+      "url": "https://manavortex.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Esfantasia (ES)",
+      "url": "https://esfantasia.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Arena Games (ES)",
+      "url": "https://arenagames.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Micelion Games (ES)",
+      "url": "https://miceliongames.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "TopDeck (ES)",
+      "url": "https://topdeck.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "ELIUS (ES)",
+      "url": "https://eliusweb.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Mono de Juegos (ES)",
+      "url": "https://monodejuegos.shop/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "KuriGames (ES)",
+      "url": "https://kurigames.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "TCG Portugal (PT)",
+      "url": "https://tcgportugal.com/wp-json/wc/store/v1/products?per_page=100&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Pokuji (FR)",
+      "url": "https://pokuji.fr/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Pokelite (FR)",
+      "url": "https://www.pokelite.fr/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "TCG-Store (IT)",
+      "url": "https://tcg-store.it/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "PokelandCY (CY)",
+      "url": "https://pokelandcy.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "The Uncommon Shop (CH)",
+      "url": "https://theuncommonshop.ch/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Samurai Sword Tokyo (JP import)",
+      "url": "https://samuraiswordtokyo.com/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Evolution TCG (NL)",
+      "url": "https://evlutcg.com/collections/pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Evolution TCG Pre-Orders (NL)",
+      "url": "https://evlutcg.com/collections/pokemon-pre-orders/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Card-Binder (30th Celebration)",
+      "url": "https://card-binder.com/collections/pokemon-30th-anniversary-tcg/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "PokeElite TCG (30 Aniversario)",
+      "url": "https://pokeelitetcg.com/collections/30-aniversario/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "PokeElite TCG (Reservas)",
+      "url": "https://pokeelitetcg.com/collections/productos-en-reserva/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Fridam Store (Preventas)",
+      "url": "https://fridamstore.com/collections/proximamente/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "UniverseTCG (30th Celebration)",
+      "url": "https://www.universetcg.com/collections/pokemon-30th-celebration/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "UniverseTCG (mF 30th Futuristic JP)",
+      "url": "https://www.universetcg.com/collections/pokemon-jp-mf/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "UniverseTCG (Pre-Orders)",
+      "url": "https://www.universetcg.com/collections/preorders/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Flipside Gaming (Pokémon Day 2026, US)",
+      "url": "https://flipsidegaming.com/collections/pokemon-day-2026-booster-boxes-sealed-cases-more/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Flipside Gaming (Preventas, US)",
+      "url": "https://flipsidegaming.com/collections/pre-orders-pokemon-tcg-upcoming-releases/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "MiniatureMarket (30th Celebration, US)",
+      "url": "https://www.miniaturemarket.com/search?search=30th+Celebration",
+      "type": "html",
+      "priority": "high",
+      "selector": ".product-box",
+      "title_selector": ".product-name",
+      "link_selector": "a.product-name",
+      "price_selector": ".product-price"
+    },
+    {
+      "name": "Card-Binder (Booster Boxes)",
+      "url": "https://card-binder.com/collections/pokemon-tcg-booster-boxes/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "PokeElite TCG (Novedades)",
+      "url": "https://pokeelitetcg.com/collections/ultimas-novedades/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "PokeElite TCG (Japonés)",
+      "url": "https://pokeelitetcg.com/collections/pokemon-japones/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Fridam Store (Pokémon)",
+      "url": "https://fridamstore.com/collections/pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "UniverseTCG (Pokémon Sellado)",
+      "url": "https://www.universetcg.com/collections/home-pokemon-sealed/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "The Card Vault (Display Cases, UK)",
+      "url": "https://thecardvault.co.uk/collections/pokemon-tcg-display-cases/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    }
+  ]
 }
