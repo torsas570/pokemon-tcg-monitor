@@ -51,6 +51,8 @@ HEALTH_META_KEY = "__health_meta__"  # clave reservada: control del resumen de s
 DEFAULT_HEALTH_FAIL_THRESHOLD = 10  # fallos seguidos antes de avisar (~10 min a 1 pasada/min)
 DEFAULT_EMPTY_THRESHOLD = 5        # pasadas a 0 productos (habiendo tenido catálogo) antes de avisar
 DEFAULT_DIGEST_COOLDOWN_MIN = 30   # minutos mínimos entre dos resúmenes de salud
+DEFAULT_AVALANCHE_STORES = 8       # tiendas con alertas a partir de las cuales se agrupa todo
+DEFAULT_MAX_ALERTS_AVALANCHE = 40  # productos como mucho en el mensaje de avalancha
 DEFAULT_MAX_WORKERS = 12           # peticiones simultáneas
 DEFAULT_TIMEOUT = 20               # segundos por petición
 DEFAULT_MAX_ALERTS = 20            # productos como mucho por aviso de tienda
@@ -361,13 +363,35 @@ def send_telegram(bot_token, chat_id, message, attempts=4, silent=False):
     return False
 
 
-def send_telegram_chunks(bot_token, chat_id, messages):
+def send_telegram_chunks(bot_token, chat_id, messages, silent=False):
     """Envía una lista de trozos. True solo si TODOS salen."""
     ok = True
     for msg in messages:
-        if not send_telegram(bot_token, chat_id, msg):
+        if not send_telegram(bot_token, chat_id, msg, silent=silent):
             ok = False
     return ok
+
+
+def is_loud(alerts):
+    """¿Merece este aviso hacer sonar el móvil? Solo si lleva algo marcado 🔥/🚨
+    (UPC, booster box, case, ETB...). Una lata o un blíster llegan al chat en
+    silencio: así lo gordo no se pierde entre lo flojo."""
+    return any(a.get("top_priority") or a.get("high_value") for a in alerts)
+
+
+def _chunk_message(title_line, blocks):
+    """Trocea por bloques enteros para no pasar del límite de Telegram (un mensaje
+    de más de 4096 caracteres se rechaza con un 400 y el aviso se perdía entero).
+    Nunca parte un producto por la mitad."""
+    msgs, cur = [], title_line
+    for b in blocks:
+        if len(cur) + len(b) + 1 > TELEGRAM_MAX_CHARS and cur != title_line:
+            msgs.append(cur)
+            cur = f"{title_line}<i>(continuación {len(msgs) + 1})</i>\n" + b + "\n"
+        else:
+            cur += b + "\n"
+    msgs.append(cur)
+    return msgs
 
 
 def product_rank(p):
@@ -504,15 +528,13 @@ def process_site(site_cfg, products, state, config):
 
 
 def format_notification(site_name, priority, alerts, config=None):
-    """Devuelve una LISTA de mensajes (troceados para no pasar del límite de
-    Telegram: un mensaje de más de 4096 caracteres se rechaza con un 400 y el
-    aviso entero se perdía). Los productos van ordenados por interés."""
+    """Devuelve una LISTA de mensajes (troceados) con los productos ordenados por
+    interés: lo gordo primero, para que no se caiga del corte."""
     config = config or {}
     max_alerts = config.get("max_alerts_per_site", DEFAULT_MAX_ALERTS)
     emoji = PRIORITY_EMOJI.get(priority, "🔔")
     has_restock = any(a["alert_type"] == "restock" for a in alerts)
     header = "🔄 RESTOCK + " if has_restock else ""
-    # Lo más gordo primero: una booster box nunca debe caerse del corte.
     ordered = sorted(alerts, key=product_rank)
     shown, extra = ordered[:max_alerts], len(ordered) - max_alerts
 
@@ -529,17 +551,53 @@ def format_notification(site_name, priority, alerts, config=None):
         blocks.append("\n".join(b))
     if extra > 0:
         blocks.append(f"... y {extra} más")
+    return _chunk_message(title_line, blocks)
 
-    # Troceo por bloques enteros: nunca se parte un producto por la mitad.
-    msgs, cur = [], title_line
-    for b in blocks:
-        if len(cur) + len(b) + 1 > TELEGRAM_MAX_CHARS and cur != title_line:
-            msgs.append(cur)
-            cur = f"{title_line}<i>(continuación {len(msgs) + 1})</i>\n" + b + "\n"
-        else:
-            cur += b + "\n"
-    msgs.append(cur)
-    return msgs
+
+def format_avalanche(entradas, config):
+    """UN solo mensaje cuando muchas tiendas avisan en la misma pasada.
+
+    El día que abra un drop del 30 aniversario van a disparar decenas de tiendas
+    casi a la vez: con un mensaje por tienda, la booster box se pierde entre
+    cuarenta avisos de latas. Aquí va una línea por producto, ordenadas por
+    importancia y con la tienda al lado, así lo gordo queda arriba del todo.
+    """
+    max_items = config.get("max_alerts_avalanche", DEFAULT_MAX_ALERTS_AVALANCHE)
+    items = [(a, name) for name, _, alerts, _ in entradas for a in alerts]
+    # Una misma tienda con varias colecciones vigiladas (p. ej. Pokemillon en
+    # Eternals + Reservas + Novedades) repite el mismo producto. Se colapsa por
+    # enlace idéntico: nunca junta tiendas distintas, porque el enlace lleva el
+    # dominio. Solo afecta a lo que se muestra; el state de cada tienda se guarda
+    # igual, así que ninguna se queda sin registrar el producto.
+    vistos, unicos = set(), []
+    for a, name in items:
+        clave = a["link"] or f"{name}|{a['title']}"
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        unicos.append((a, name))
+    items = unicos
+    # Primero lo más gordo; a igual rango, los restock antes que los listados nuevos.
+    items.sort(key=lambda t: (product_rank(t[0]), 0 if t[0]["alert_type"] == "restock" else 1))
+    total = len(items)
+    shown = items[:max_items]
+
+    title_line = (f"🔥 <b>30 ANIV — {len(entradas)} tiendas con novedades</b> "
+                  f"({total} productos)\n")
+    blocks = []
+    for a, tienda in shown:
+        mark = "🔥" if a.get("top_priority") else ("🚨" if a.get("high_value") else "•")
+        tag = "🔄" if a["alert_type"] == "restock" else "🆕"
+        stock_mark = "" if a["in_stock"] else " ⚠️ AGOTADO"
+        b = [f"{mark} {tag} <b>{a['title']}</b>{stock_mark}",
+             f"  💰 {a['price']} — <i>{tienda}</i>"]
+        if a["link"]:
+            b.append(f"  🔗 {a['link']}")
+        b.append("")
+        blocks.append("\n".join(b))
+    if total > len(shown):
+        blocks.append(f"... y {total - len(shown)} productos más")
+    return _chunk_message(title_line, blocks)
 
 
 def run_once(priority_filter=None):
@@ -579,6 +637,7 @@ def run_once(priority_filter=None):
 
     # --- 3) Envío; el state de un sitio solo se persiste si su aviso salió ---
     n_alertas = 0
+    con_alertas = []
     for name, priority, alerts, new_site_state in pending:
         if not alerts:
             state[name] = new_site_state
@@ -586,13 +645,35 @@ def run_once(priority_filter=None):
         n_new = sum(1 for a in alerts if a["alert_type"] == "new")
         n_re = sum(1 for a in alerts if a["alert_type"] == "restock")
         log.info(f"Alertas {name} [{priority}]: {n_new} nuevos + {n_re} restock")
-        msgs = format_notification(name, priority, alerts, config)
-        if send_telegram_chunks(bot_token, chat_id, msgs):
-            state[name] = new_site_state
-            n_alertas += len(alerts)
+        con_alertas.append((name, priority, alerts, new_site_state))
+
+    solo_prioritarios = config.get("sound_only_for_priority", True)
+    umbral_avalancha = config.get("avalanche_store_threshold", DEFAULT_AVALANCHE_STORES)
+
+    if len(con_alertas) > umbral_avalancha:
+        # Avalancha: un único mensaje en vez de uno por tienda.
+        todas = [a for _, _, alerts, _ in con_alertas for a in alerts]
+        log.info(f"AVALANCHA: {len(con_alertas)} tiendas, {len(todas)} productos "
+                 f"-> un solo mensaje agrupado")
+        msgs = format_avalanche(con_alertas, config)
+        silent = solo_prioritarios and not is_loud(todas)
+        if send_telegram_chunks(bot_token, chat_id, msgs, silent=silent):
+            for name, _, alerts, new_site_state in con_alertas:
+                state[name] = new_site_state
+                n_alertas += len(alerts)
         else:
-            log.error(f"{name}: aviso NO enviado -> no se marca como visto, "
-                      f"se reintenta en la próxima pasada")
+            log.error("Aviso de avalancha NO enviado -> nada se marca como visto, "
+                      "se reintenta en la próxima pasada")
+    else:
+        for name, priority, alerts, new_site_state in con_alertas:
+            msgs = format_notification(name, priority, alerts, config)
+            silent = solo_prioritarios and not is_loud(alerts)
+            if send_telegram_chunks(bot_token, chat_id, msgs, silent=silent):
+                state[name] = new_site_state
+                n_alertas += len(alerts)
+            else:
+                log.error(f"{name}: aviso NO enviado -> no se marca como visto, "
+                          f"se reintenta en la próxima pasada")
 
     # --- 4) Salud (caídas y tiendas ciegas): UN resumen, y en silencio ---
     health_msgs, deshacer_salud = _collect_health_alerts(state, config)
