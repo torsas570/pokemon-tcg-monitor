@@ -917,6 +917,18 @@
       "url": "https://thecardvault.co.uk/collections/pokemon-tcg-display-cases/products.json?limit=250",
       "type": "api",
       "priority": "medium"
+    },
+    {
+      "name": "Only-Cards (Novedades y Reservas)",
+      "url": "https://www.only-cards.com/wp-json/wc/store/v1/products?per_page=100&orderby=date",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Only-Cards (Pokémon)",
+      "url": "https://www.only-cards.com/wp-json/wc/store/v1/products?per_page=100&category=338&orderby=date",
+      "type": "api",
+      "priority": "medium"
     }
   ]
 }
