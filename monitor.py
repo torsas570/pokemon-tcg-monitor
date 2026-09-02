@@ -106,7 +106,7 @@ def _record_health(state, name, ok, error=None, n_products=None):
 
 def _fmt_store_list(names, limit=10):
     """Lista compacta separada por · y recortada, para no llenar la pantalla."""
-    shown = names[:limit]
+    shown = [html_mod.escape(n) for n in names[:limit]]
     extra = len(names) - len(shown)
     txt = " · ".join(shown)
     return txt + (f" <i>y {extra} más</i>" if extra else "")
@@ -395,16 +395,30 @@ def _chunk_message(title_line, blocks):
 
 
 def product_rank(p):
-    """Orden de interés: 0 = UPC/booster box/case, 1 = ETB/premium, 2 = resto.
+    """Orden de interés: 0 = top (🔥), 1 = high_value (🚨), 2 = promo (🎁), 3 = resto.
 
-    El aviso se corta a `max_alerts_per_site` productos, así que sin ordenar una
-    booster box podía quedar fuera del corte por detrás de un llavero.
+    El aviso se corta a `max_alerts_per_site` productos, así que sin ordenar lo
+    gordo podía quedar fuera del corte por detrás de un llavero. Qué cae en cada
+    nivel lo decide el config de cada bot (top_priority_keywords, etc.); un bot
+    que no defina un nivel simplemente no lo usa.
     """
     if p.get("top_priority"):
         return 0
     if p.get("high_value"):
         return 1
-    return 2
+    if p.get("promo"):
+        return 2
+    return 3
+
+
+def rank_mark(p):
+    if p.get("top_priority"):
+        return "🔥"
+    if p.get("high_value"):
+        return "🚨"
+    if p.get("promo"):
+        return "🎁"
+    return ""
 
 
 def matches_keywords(title, keywords):
@@ -474,6 +488,8 @@ def process_site(site_cfg, products, state, config):
     notify_only_in_stock = config.get("notify_only_in_stock", True)
     top_priority_keywords = config.get("top_priority_keywords", [])
     high_value_keywords = config.get("high_value_keywords", [])
+    promo_keywords = config.get("promo_keywords", [])
+    match_label = config.get("match_label", "el filtro")
 
     if required_keywords:
         filtered = [
@@ -486,8 +502,8 @@ def process_site(site_cfg, products, state, config):
             if matches_keywords(p["title"], required_keywords)
             and exclude_keywords and matches_keywords(p["title"], exclude_keywords)
         )
-        log.info(f"  {name}: {len(products)} detectados, {len(filtered)} matchean 30 aniv"
-                 + (f" ({n_excl} descartados por idioma)" if n_excl else ""))
+        log.info(f"  {name}: {len(products)} detectados, {len(filtered)} matchean {match_label}"
+                 + (f" ({n_excl} descartados por exclusión)" if n_excl else ""))
         products = filtered
     else:
         log.info(f"  {name}: {len(products)} productos detectados")
@@ -502,12 +518,22 @@ def process_site(site_cfg, products, state, config):
     if not products:
         return [], site_state
 
+    # Baseline de la PRIMERA pasada de una tienda. Con `silent_first_run` se absorbe
+    # todo lo existente sin avisar (lo que quieren los bots cuyo juego ya tiene
+    # catálogo o aún no existe); sin él, se notifica lo que esté en stock.
+    if is_first_run and config.get("silent_first_run", False):
+        for p in products:
+            site_state[p["uid"]] = {"in_stock": p["in_stock"]}
+        log.info(f"  {name}: baseline inicial silenciado ({len(products)} productos)")
+        return [], site_state
+
     alerts = []
     for p in products:
         uid = p["uid"]
         prev = site_state.get(uid)
         p["top_priority"] = matches_keywords(p["title"], top_priority_keywords)
         p["high_value"] = matches_keywords(p["title"], high_value_keywords)
+        p["promo"] = matches_keywords(p["title"], promo_keywords)
         if prev is None:
             # Producto nuevo
             if not is_first_run:
@@ -532,19 +558,26 @@ def format_notification(site_name, priority, alerts, config=None):
     interés: lo gordo primero, para que no se caiga del corte."""
     config = config or {}
     max_alerts = config.get("max_alerts_per_site", DEFAULT_MAX_ALERTS)
+    bot_emoji = config.get("bot_emoji", "🔔")
+    bot_label = config.get("bot_label", "MONITOR")
     emoji = PRIORITY_EMOJI.get(priority, "🔔")
     has_restock = any(a["alert_type"] == "restock" for a in alerts)
     header = "🔄 RESTOCK + " if has_restock else ""
     ordered = sorted(alerts, key=product_rank)
     shown, extra = ordered[:max_alerts], len(ordered) - max_alerts
 
-    title_line = f"🔥 {header}<b>30 ANIV — {site_name}</b> {emoji} [{priority.upper()}]\n"
+    title_line = (f"{bot_emoji} {header}<b>{bot_label} — {html_mod.escape(site_name)}</b> "
+                  f"{emoji} [{priority.upper()}]\n")
     blocks = []
     for p in shown:
         tag = "🔄 VUELVE" if p["alert_type"] == "restock" else "🆕 NUEVO"
-        rank_mark = "🔥 " if p.get("top_priority") else ("🚨 " if p.get("high_value") else "")
+        mark = rank_mark(p)
+        mark = f"{mark} " if mark else ""
         stock_mark = "" if p["in_stock"] else " ⚠️ AGOTADO"
-        b = [f"• {rank_mark}{tag}{stock_mark} <b>{p['title']}</b>", f"  💰 {p['price']}"]
+        # Escapado obligatorio: un '<' o un '&' suelto en el título rompe el
+        # parse_mode HTML, Telegram devuelve 400 y el aviso se pierde entero.
+        b = [f"• {mark}{tag}{stock_mark} <b>{html_mod.escape(p['title'])}</b>",
+             f"  💰 {html_mod.escape(p['price'])}"]
         if p["link"]:
             b.append(f"  🔗 {p['link']}")
         b.append("")
@@ -582,15 +615,17 @@ def format_avalanche(entradas, config):
     total = len(items)
     shown = items[:max_items]
 
-    title_line = (f"🔥 <b>30 ANIV — {len(entradas)} tiendas con novedades</b> "
+    bot_emoji = config.get("bot_emoji", "🔔")
+    bot_label = config.get("bot_label", "MONITOR")
+    title_line = (f"{bot_emoji} <b>{bot_label} — {len(entradas)} tiendas con novedades</b> "
                   f"({total} productos)\n")
     blocks = []
     for a, tienda in shown:
-        mark = "🔥" if a.get("top_priority") else ("🚨" if a.get("high_value") else "•")
+        mark = rank_mark(a) or "•"
         tag = "🔄" if a["alert_type"] == "restock" else "🆕"
         stock_mark = "" if a["in_stock"] else " ⚠️ AGOTADO"
-        b = [f"{mark} {tag} <b>{a['title']}</b>{stock_mark}",
-             f"  💰 {a['price']} — <i>{tienda}</i>"]
+        b = [f"{mark} {tag} <b>{html_mod.escape(a['title'])}</b>{stock_mark}",
+             f"  💰 {html_mod.escape(a['price'])} — <i>{html_mod.escape(tienda)}</i>"]
         if a["link"]:
             b.append(f"  🔗 {a['link']}")
         b.append("")

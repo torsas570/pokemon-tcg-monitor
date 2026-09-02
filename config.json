@@ -90,6 +90,10 @@
     "flesh and blood",
     "riftbound"
   ],
+  "bot_emoji": "🔥",
+  "bot_label": "30 ANIV",
+  "match_label": "30 aniv",
+  "silent_first_run": false,
   "max_workers": 12,
   "request_timeout_seconds": 20,
   "max_alerts_per_site": 20,
