@@ -55,6 +55,13 @@ DEFAULT_AVALANCHE_STORES = 8       # tiendas con alertas a partir de las cuales 
 DEFAULT_MAX_ALERTS_AVALANCHE = 40  # productos como mucho en el mensaje de avalancha
 DEFAULT_MAX_WORKERS = 12           # peticiones simultáneas
 DEFAULT_TIMEOUT = 20               # segundos por petición
+# Una tienda caída no debe encarecer TODAS las pasadas. Con 2 intentos y 20s de
+# timeout, una sola tienda que agota el timeout mete 42s en cada pasada (medido:
+# Friki Galaxy dejaba las pasadas de Naruto en 44s frente a los 8s del resto).
+DEFAULT_DEGRADED_AFTER = 5         # fallos seguidos -> timeout corto y 1 solo intento
+DEFAULT_DEGRADED_TIMEOUT = 8       # segundos para una tienda ya degradada
+DEFAULT_BACKOFF_AFTER = 20         # fallos seguidos -> además se comprueba 1 de cada N pasadas
+DEFAULT_BACKOFF_EVERY = 10         # pasadas que se salta una tienda en backoff
 DEFAULT_MAX_ALERTS = 20            # productos como mucho por aviso de tienda
 TELEGRAM_MAX_CHARS = 3800          # el límite real son 4096; dejamos margen
 
@@ -89,6 +96,7 @@ def _record_health(state, name, ok, error=None, n_products=None):
     """
     health = state.setdefault(HEALTH_KEY, {})
     h = health.setdefault(name, {"fails": 0, "alerted": False, "last_error": None})
+    h["skips"] = 0  # se acaba de comprobar: el contador de saltos del backoff se reinicia
     if ok:
         h["fails"] = 0
         h["last_error"] = None
@@ -435,7 +443,30 @@ def normalize_state(raw):
     return {}
 
 
-def fetch_site(site_cfg, config):
+def plan_fetch(name, health, config):
+    """Decide cómo tratar a una tienda según sus fallos seguidos.
+
+    Devuelve (comprobar, timeout, intentos). Una tienda sana va con el timeout
+    normal y 2 intentos; una que lleva fallando baja a timeout corto y 1 intento
+    (deja de lastrar la pasada entera); y una caída de forma persistente pasa a
+    comprobarse 1 de cada N pasadas, para que siga pudiendo auto-recuperarse sin
+    costar una petición por pasada. En cuanto responde, `fails` vuelve a 0 y con
+    ello el trato normal.
+    """
+    h = health.get(name, {})
+    fails = h.get("fails", 0)
+    timeout = config.get("request_timeout_seconds", DEFAULT_TIMEOUT)
+    if fails < config.get("degraded_fail_threshold", DEFAULT_DEGRADED_AFTER):
+        return True, timeout, 2
+    degradado = (True, config.get("degraded_timeout_seconds", DEFAULT_DEGRADED_TIMEOUT), 1)
+    if fails < config.get("backoff_fail_threshold", DEFAULT_BACKOFF_AFTER):
+        return degradado
+    if h.get("skips", 0) >= config.get("backoff_every_passes", DEFAULT_BACKOFF_EVERY):
+        return degradado
+    return (False, 0, 0)
+
+
+def fetch_site(site_cfg, config, timeout=None, attempts=2):
     """SOLO red y parseo. No toca el state, así puede correr en paralelo.
 
     Devuelve (site_cfg, productos|None, error). Sacar la parte de red fuera del
@@ -446,7 +477,8 @@ def fetch_site(site_cfg, config):
     name = site_cfg["name"]
     url = site_cfg["url"]
     is_api = site_cfg.get("type", "html") == "api"
-    timeout = config.get("request_timeout_seconds", DEFAULT_TIMEOUT)
+    if timeout is None:
+        timeout = config.get("request_timeout_seconds", DEFAULT_TIMEOUT)
 
     headers = build_headers(config["user_agent"], is_api=is_api)
     if is_api:
@@ -455,7 +487,7 @@ def fetch_site(site_cfg, config):
         headers["Referer"] = f"{p.scheme}://{p.netloc}/"
 
     last_err = None
-    for attempt in range(2):
+    for attempt in range(attempts):
         try:
             resp = requests.get(url, headers=headers, timeout=timeout)
             resp.raise_for_status()
@@ -468,7 +500,7 @@ def fetch_site(site_cfg, config):
             return site_cfg, extract_products_html(resp.text, site_cfg), None
         except Exception as e:
             last_err = e
-            if attempt == 0:
+            if attempt + 1 < attempts:
                 time.sleep(2)
     log.warning(f"  {name} no disponible: {last_err}")
     return site_cfg, None, str(last_err)
@@ -653,11 +685,31 @@ def run_once(priority_filter=None):
     sites_sorted = sorted(sites, key=lambda s: 0 if s.get("priority") == "high" else 1)
 
     # --- 1) Red en PARALELO (sin tocar el state) ---
-    workers = max(1, min(config.get("max_workers", DEFAULT_MAX_WORKERS), len(sites_sorted) or 1))
+    # A las tiendas que llevan fallando se les acorta el timeout, y a las caídas de
+    # forma persistente se las salta la mayoría de pasadas: así una sola tienda
+    # muerta deja de marcar el ritmo de todas las pasadas.
+    health = state.get(HEALTH_KEY, {})
+    plan = {s["name"]: plan_fetch(s["name"], health, config) for s in sites_sorted}
+    a_consultar = [s for s in sites_sorted if plan[s["name"]][0]]
+    saltadas = [s["name"] for s in sites_sorted if not plan[s["name"]][0]]
+    for name in saltadas:
+        h = health.setdefault(name, {})
+        h["skips"] = h.get("skips", 0) + 1
+    degradadas = [s["name"] for s in a_consultar if plan[s["name"]][2] == 1]
+
+    workers = max(1, min(config.get("max_workers", DEFAULT_MAX_WORKERS), len(a_consultar) or 1))
     t0 = time.time()
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        results = list(pool.map(lambda s: fetch_site(s, config), sites_sorted))
-    log.info(f"{len(sites_sorted)} tiendas consultadas en {time.time() - t0:.1f}s ({workers} hilos)")
+        results = list(pool.map(
+            lambda s: fetch_site(s, config, timeout=plan[s["name"]][1], attempts=plan[s["name"]][2]),
+            a_consultar))
+    extra = ""
+    if degradadas:
+        extra += f", {len(degradadas)} con timeout corto por fallos"
+    if saltadas:
+        extra += f", {len(saltadas)} saltadas (caídas persistentes)"
+    log.info(f"{len(a_consultar)} tiendas consultadas en {time.time() - t0:.1f}s "
+             f"({workers} hilos){extra}")
 
     # --- 2) Proceso SECUENCIAL contra el state (evita carreras) ---
     pending = []
