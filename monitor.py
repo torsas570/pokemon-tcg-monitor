@@ -263,8 +263,11 @@ def extract_products_html(html, site_cfg):
         price = price_el.get_text(strip=True) if price_el else "Precio no disponible"
 
         in_stock = detect_html_in_stock(item)
-        uid = hashlib.md5(f"{title}{link}".encode()).hexdigest()
-        products.append({"uid": uid, "title": title, "link": link, "price": price, "in_stock": in_stock})
+        # uid ESTABLE: el enlace, que sobrevive a que la tienda retoque el título.
+        uid = hashlib.md5((link or f"{title}").encode()).hexdigest()
+        legacy = hashlib.md5(f"{title}{link}".encode()).hexdigest()
+        products.append({"uid": uid, "legacy_uid": legacy, "title": title,
+                         "link": link, "price": price, "in_stock": in_stock})
 
     # Un elemento sin título es inservible: los bots filtran por keyword sobre el
     # título, así que nunca casaría. Si NINGUNO tiene título, los selectores están
@@ -306,8 +309,17 @@ def extract_products_api(data, base_url=""):
                 if p_raw:
                     price = f"{p_raw}€"
                 in_stock = any(v.get("available", False) for v in variants)
-            uid = hashlib.md5(f"{item.get('id', '')}{title}".encode()).hexdigest()
-            products.append({"uid": uid, "title": title, "link": link, "price": price, "in_stock": in_stock})
+            # uid ESTABLE: solo el id del producto. Antes incluía el título, así que
+            # cualquier retoque del título ("PREVENTA X" -> "X") cambiaba el uid y el
+            # producto volvía a parecer nuevo -> el mismo enlace se avisaba otra vez
+            # horas después. `legacy_uid` es el esquema viejo y solo sirve para leer
+            # el state antiguo sin disparar una tanda de falsos "nuevos".
+            pid = item.get("id", "")
+            uid = hashlib.md5(f"shopify:{pid}".encode()).hexdigest() if pid else \
+                hashlib.md5(f"{pid}{title}".encode()).hexdigest()
+            legacy = hashlib.md5(f"{pid}{title}".encode()).hexdigest()
+            products.append({"uid": uid, "legacy_uid": legacy, "title": title,
+                             "link": link, "price": price, "in_stock": in_stock})
         return products
 
     # WooCommerce Store API
@@ -323,8 +335,12 @@ def extract_products_api(data, base_url=""):
         except (ValueError, TypeError):
             price = "Precio no disponible"
         in_stock = item.get("is_in_stock", item.get("has_stock", True))
-        uid = hashlib.md5(f"{item.get('id', '')}{title}".encode()).hexdigest()
-        products.append({"uid": uid, "title": title, "link": link, "price": price, "in_stock": in_stock})
+        pid = item.get("id", "")
+        uid = hashlib.md5(f"woo:{pid}".encode()).hexdigest() if pid else \
+            hashlib.md5(f"{pid}{title}".encode()).hexdigest()
+        legacy = hashlib.md5(f"{pid}{title}".encode()).hexdigest()
+        products.append({"uid": uid, "legacy_uid": legacy, "title": title,
+                         "link": link, "price": price, "in_stock": in_stock})
     return products
 
 
@@ -563,6 +579,12 @@ def process_site(site_cfg, products, state, config):
     for p in products:
         uid = p["uid"]
         prev = site_state.get(uid)
+        if prev is None and p.get("legacy_uid"):
+            # Migración silenciosa del esquema viejo de uid: si el producto ya estaba
+            # en el state con la clave antigua, se hereda su estado y se reescribe con
+            # la nueva. Sin esto, el cambio de esquema haría parecer NUEVO todo el
+            # catálogo y dispararía una tanda enorme de avisos falsos.
+            prev = site_state.pop(p["legacy_uid"], None)
         p["top_priority"] = matches_keywords(p["title"], top_priority_keywords)
         p["high_value"] = matches_keywords(p["title"], high_value_keywords)
         p["promo"] = matches_keywords(p["title"], promo_keywords)
@@ -723,9 +745,17 @@ def run_once(priority_filter=None):
         pending.append((name, site_cfg.get("priority", "medium"), alerts, new_site_state))
 
     # --- 3) Envío; el state de un sitio solo se persiste si su aviso salió ---
+    # El uid de Shopify es md5(id_de_producto + título): el MISMO artículo listado en
+    # varias colecciones de la MISMA tienda (Pokemillon está en Eternals + Reservas +
+    # Novedades + Cajas de Sobres) comparte uid. Sin esto llegaban hasta 4 Telegram
+    # seguidos con el mismo enlace. Como `pending` va en orden de prioridad, avisa la
+    # entrada más prioritaria y las demás lo dan por visto sin repetirlo.
+    seen_uids = set()
     n_alertas = 0
     con_alertas = []
     for name, priority, alerts, new_site_state in pending:
+        alerts = [a for a in alerts if a["uid"] not in seen_uids]
+        seen_uids.update(a["uid"] for a in alerts)
         if not alerts:
             state[name] = new_site_state
             continue

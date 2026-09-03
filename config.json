@@ -249,16 +249,6 @@
       "priority": "high"
     },
     {
-      "name": "Kantocards (Preventas)",
-      "url": "https://kantocards.com/collections/preventas-pokemon",
-      "type": "html",
-      "priority": "high",
-      "selector": ".product-card, .card-wrapper, .grid__item",
-      "title_selector": ".product-card-title, .card__heading, h3",
-      "link_selector": "a[href*='/products/']",
-      "price_selector": ".price, .price-item"
-    },
-    {
       "name": "Factory Cards (Reservas)",
       "url": "https://factorycardstcg.com/collections/reservas-tcg-preventa-pokemon-one-piece-y-mas/products.json?limit=250",
       "type": "api",
@@ -306,26 +296,6 @@
       "priority": "high"
     },
     {
-      "name": "Cash Cards Unlimited",
-      "url": "https://cashcardsunlimited.com/collections/pokemon-sealed-product?sort_by=created-descending",
-      "type": "html",
-      "priority": "high",
-      "selector": ".grid-product, .product-card, .card-wrapper",
-      "title_selector": ".grid-product__title, .product-card-title, .card__heading, h3",
-      "link_selector": ".grid-product__link, a[href*='/products/']",
-      "price_selector": ".grid-product__price, .price, .price-item"
-    },
-    {
-      "name": "TCGStadium",
-      "url": "https://tcg-stadium.com/collections/english-sealed-products?sort_by=created-descending",
-      "type": "html",
-      "priority": "high",
-      "selector": ".product-card, .card-wrapper, .grid__item",
-      "title_selector": ".product-card-title, .card__heading",
-      "link_selector": "a[href*='/products/']",
-      "price_selector": ".price, .price-item"
-    },
-    {
       "_comment": "=== PRIORITY MEDIUM — ESPAÑA, BOXES Y ETB ===",
       "name": "Pokemillon (Cajas de Sobres)",
       "url": "https://www.pokemillon.com/collections/cajas-de-sobres/products.json?limit=250",
@@ -357,50 +327,10 @@
       "priority": "medium"
     },
     {
-      "name": "TodoHits",
-      "url": "https://todohits.com/collections/pokemon?sort_by=created-descending",
-      "type": "html",
-      "priority": "medium",
-      "selector": ".product-card, .card-wrapper, .grid__item",
-      "title_selector": ".product-card-title, .card__heading, h3",
-      "link_selector": "a[href*='/products/']",
-      "price_selector": ".price, .price-item"
-    },
-    {
       "name": "Pokezilla (Catálogo)",
       "url": "https://pokezilla.com/collections/all/products.json?limit=250",
       "type": "api",
       "priority": "medium"
-    },
-    {
-      "name": "PokedealTCG",
-      "url": "https://www.pokedealtcg.es/collections/todos-los-sellados?sort_by=created-descending",
-      "type": "html",
-      "priority": "medium",
-      "selector": ".product-card, .card-wrapper, .grid__item",
-      "title_selector": ".product-card-title, .card__heading, h3",
-      "link_selector": "a[href*='/products/']",
-      "price_selector": ".price, .price-item"
-    },
-    {
-      "name": "JJ Collection",
-      "url": "https://www.jjcollection.es/collections/pokemon-tcg-booster-box?sort_by=created-descending",
-      "type": "html",
-      "priority": "medium",
-      "selector": ".product-card, .card-wrapper, .grid__item",
-      "title_selector": ".product-card-title, .card__heading, h3",
-      "link_selector": "a[href*='/products/']",
-      "price_selector": ".price, .price-item"
-    },
-    {
-      "name": "Kantocards",
-      "url": "https://kantocards.com/collections/booster-boxes?sort_by=created-descending",
-      "type": "html",
-      "priority": "medium",
-      "selector": ".product-card, .card-wrapper, .grid__item",
-      "title_selector": ".product-card-title, .card__heading, h3",
-      "link_selector": "a[href*='/products/']",
-      "price_selector": ".price, .price-item"
     },
     {
       "name": "Pokewoke",
@@ -936,6 +866,78 @@
     {
       "name": "Only-Cards (Pokémon)",
       "url": "https://www.only-cards.com/wp-json/wc/store/v1/products?per_page=100&category=338&orderby=date",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Kantocards (30th Celebration)",
+      "url": "https://kantocards.com/collections/30th-celebration/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Kantocards (Preventas 30 Aniv)",
+      "url": "https://kantocards.com/collections/preventas-pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Cash Cards Unlimited (30th Anniversary)",
+      "url": "https://cashcardsunlimited.com/collections/pokemon-30th-anniversary-collection/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "JJ Collection (30th Celebration)",
+      "url": "https://www.jjcollection.es/collections/30th-aniversario-tcg-pokemon/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "PokedealTCG (Preventa)",
+      "url": "https://www.pokedealtcg.es/collections/preventa/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "TodoHits (Reservas)",
+      "url": "https://todohits.com/collections/reservas/products.json?limit=250",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "PokedealTCG (Sellados)",
+      "url": "https://www.pokedealtcg.es/collections/sellados-disponibles/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "TodoHits (Novedades)",
+      "url": "https://todohits.com/collections/novedades/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "TCGStadium (Novedades)",
+      "url": "https://tcg-stadium.com/collections/new-releases/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Kantocards (Booster Boxes)",
+      "url": "https://kantocards.com/collections/booster-boxes/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "JJ Collection (Cases Sellados)",
+      "url": "https://www.jjcollection.es/collections/pokemon-tcg-cases-sellados/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "Cash Cards Unlimited (International)",
+      "url": "https://cashcardsunlimited.com/collections/sealed-international-pokemon-products/products.json?limit=250",
       "type": "api",
       "priority": "medium"
     }
