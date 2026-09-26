@@ -942,7 +942,7 @@
       "priority": "medium"
     },
     {
-      "_comment": "=== Añadidas 26-sep-2026: Madrid Norte TCG (Shopify) y Geekkaos (PrestaShop, marca out_of_stock en la miniatura). Metrópolis Center descartada: Cloudflare pide reto JS en todo el catálogo. ===",
+      "_comment": "=== Añadidas 26-sep-2026: Madrid Norte TCG (Shopify). Descartadas por Cloudflare (403 desde Actions, ni con navegador): Geekkaos y Metrópolis Center. ===",
       "name": "Madrid Norte TCG (30 Aniv)",
       "url": "https://madridnortetcg.com/collections/pokemon-30-aniversario/products.json?limit=250",
       "type": "api",
@@ -953,16 +953,6 @@
       "url": "https://madridnortetcg.com/collections/pokemon/products.json?limit=250",
       "type": "api",
       "priority": "high"
-    },
-    {
-      "name": "Geekkaos (Pokémon)",
-      "url": "https://geekkaos.com/27-pokemon-tcg?resultsPerPage=200&order=product.date_add.desc",
-      "type": "html",
-      "priority": "high",
-      "selector": "#js-product-list .product-miniature",
-      "title_selector": ".product-title a",
-      "link_selector": ".product-title a",
-      "price_selector": ".product-price"
     }
   ]
 }
