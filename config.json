@@ -657,7 +657,7 @@
     },
     {
       "name": "Manavortex (ES)",
-      "url": "https://manavortex.es/wp-json/wc/store/v1/products?per_page=50&search=pokemon&orderby=date",
+      "url": "https://manavortex.es/wp-json/wc/store/v1/products?per_page=100&search=pokemon&orderby=date",
       "type": "api",
       "priority": "medium"
     },
