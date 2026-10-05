@@ -17,15 +17,18 @@ Features:
 
 import json
 import hashlib
+import re
+import unicodedata
 import time
 import logging
 import os
 import sys
 import argparse
+import traceback
 import html as html_mod
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -45,9 +48,36 @@ CONFIG_PATH = BASE_DIR / "config.json"
 STATE_PATH = BASE_DIR / "state.json"
 
 PRIORITY_EMOJI = {"high": "🚨", "medium": "📦", "low": "🔍"}
-OOS_KEYWORDS = ["agotado", "sold out", "out of stock", "vendido", "no disponible", "rupture de stock"]
+# Vocabulario para leer el stock en los listados HTML (portado del bot de One
+# Piece, donde se auditó contra el HTML real). "agotad" cubre agotado/agotada/
+# agotados; La Cueva Roja dice "Fuera de stock", no "out of stock".
+OOS_KEYWORDS = [
+    "agotad", "fuera de stock", "sin existencias", "sin stock",
+    "no disponible", "sold out", "out of stock", "vendido",
+    "rupture de stock", "esgotado", "esaurito", "ausverkauft", "uitverkocht",
+]
+# El marcador casi nunca está en la raíz de la miniatura: PrestaShop lo cuelga de
+# un <span class="product-flag out_of_stock"> hijo, y Dungeon Marvels usa
+# "soy_agotado" en el propio botón. Ojo al guion BAJO: la lista vieja solo miraba
+# "out-of-stock" con guion y por eso La Cueva Roja salía siempre disponible.
+OOS_CLASS_TOKENS = [
+    "out-of-stock", "out_of_stock", "outofstock",
+    "sold-out", "sold_out", "soldout",
+    "agotado", "product-unavailable", "no-stock", "nostock",
+]
+CART_CLASS_TOKENS = ["add-to-cart", "add_to_cart", "addtocart", "ajax_add_to_cart"]
+CART_TEXT_TOKENS = [
+    "anadir al carrito", "añadir al carrito", "añadir a la cesta",
+    "add to cart", "add to basket", "aggiungi al carrello", "ajouter au panier",
+]
 HEALTH_KEY = "__health__"  # clave reservada en state para la salud de las tiendas (no es un sitio)
 HEALTH_META_KEY = "__health_meta__"  # clave reservada: control del resumen de salud
+SIG_KEY = "__sig__"        # clave reservada: firma de URL+filtros con la que se vio cada tienda
+RUN_META_KEY = "__run__"   # clave reservada: última pasada completada (lo lee el heartbeat)
+# Todas las claves reservadas empiezan por "__": así heartbeat y poda las
+# distinguen de las tiendas sin tener que enumerarlas.
+CRASH_FLAG = BASE_DIR / ".crash_notified"  # evita repetir el aviso de caída en cada pasada
+DEFAULT_RECOVER_PASSES = 3  # pasadas buenas SEGUIDAS para dar por recuperada una tienda
 DEFAULT_HEALTH_FAIL_THRESHOLD = 10  # fallos seguidos antes de avisar (~10 min a 1 pasada/min)
 DEFAULT_EMPTY_THRESHOLD = 5        # pasadas a 0 productos (habiendo tenido catálogo) antes de avisar
 DEFAULT_DIGEST_COOLDOWN_MIN = 30   # minutos mínimos entre dos resúmenes de salud
@@ -100,6 +130,9 @@ def _record_health(state, name, ok, error=None, n_products=None):
     if ok:
         h["fails"] = 0
         h["last_error"] = None
+        # Racha de pasadas buenas: una tienda intermitente (Friki Galaxy) no se da
+        # por recuperada con UNA respuesta suelta (ver _collect_health_alerts).
+        h["ok_streak"] = h.get("ok_streak", 0) + 1
         if n_products is not None:
             best = h.get("max_products", 0)
             if n_products > 0:
@@ -109,6 +142,7 @@ def _record_health(state, name, ok, error=None, n_products=None):
                 h["empty_streak"] = h.get("empty_streak", 0) + 1
     else:
         h["fails"] = h.get("fails", 0) + 1
+        h["ok_streak"] = 0
         h["last_error"] = error
 
 
@@ -145,12 +179,17 @@ def _collect_health_alerts(state, config):
         restores.append(lambda: h.__setitem__(key, prev))
         h[key] = value
 
+    # Histéresis: una tienda intermitente (cae y vuelve cada pocas pasadas) generaba
+    # un resumen por cada vaivén — 5 en una noche con Friki Galaxy. Solo se da por
+    # recuperada tras varias pasadas buenas SEGUIDAS; si recae antes, sigue "caída"
+    # (alerted=True) y no se vuelve a avisar.
+    recover_passes = config.get("health_recover_passes", DEFAULT_RECOVER_PASSES)
     for name, h in sorted(health.items()):
         fails = h.get("fails", 0)
         if fails >= threshold and not h.get("alerted", False):
             flip(h, "alerted", True)
             caidas.append(name)
-        elif fails == 0 and h.get("alerted", False):
+        elif fails == 0 and h.get("alerted", False) and h.get("ok_streak", 0) >= recover_passes:
             flip(h, "alerted", False)
             recuperadas.append(name)
 
@@ -180,7 +219,7 @@ def _collect_health_alerts(state, config):
     lineas = []
     if ciegas:
         for name, best, streak in ciegas:
-            lineas.append(f"👻 <b>{name}</b>: responde OK pero lleva {streak} pasadas a "
+            lineas.append(f"👻 <b>{html_mod.escape(name)}</b>: responde OK pero lleva {streak} pasadas a "
                           f"<b>0 productos</b> (tenía {best}). Revisa la URL en config.json.")
     if caidas:
         cabecera = f"⚠️ <b>{len(caidas)} tiendas no responden</b>"
@@ -235,22 +274,95 @@ def build_headers(user_agent, is_api=False):
     return headers
 
 
-def detect_html_in_stock(item):
-    """Detecta in_stock en un nodo HTML buscando marcadores típicos."""
-    classes = " ".join(item.get("class", [])).lower()
-    if any(k in classes for k in ["out-of-stock", "sold-out", "outofstock", "agotado"]):
+def _is_disabled(el):
+    if el.has_attr("disabled") or el.get("aria-disabled") == "true":
+        return True
+    return "disabled" in " ".join(el.get("class", [])).lower()
+
+
+def _cart_controls(item):
+    """Botones/enlaces de "añadir al carrito" dentro de la miniatura."""
+    controls = []
+    for el in item.select("button, a, input"):
+        classes = " ".join(el.get("class", [])).lower()
+        # La lista de deseos también es un botón con "add" en la clase: fuera.
+        if "wishlist" in classes or "compare" in classes:
+            continue
+        text = el.get_text(" ", strip=True).lower()
+        if any(t in classes for t in CART_CLASS_TOKENS) or any(t in text for t in CART_TEXT_TOKENS):
+            controls.append(el)
+    return controls
+
+
+def detect_html_stock_signal(item):
+    """Tri-estado: False = agotado, True = en stock, None = el listado no lo dice.
+
+    Sustituye a la detección vieja, que solo miraba las clases del elemento RAÍZ
+    y buscaba "out-of-stock" con guion: en PrestaShop el marcador es un
+    <span class="product-flag out_of_stock"> HIJO, así que La Cueva Roja daba
+    todo como disponible y de ahí no podía llegar nunca un restock.
+    Las señales NEGATIVAS mandan sobre las positivas: hay temas (Dungeon Marvels)
+    que pintan un "Add to Cart" activo también en los productos agotados.
+    """
+    # 1. Clase de agotado en la propia miniatura o en CUALQUIER descendiente.
+    for el in [item] + item.select("[class]"):
+        classes = " ".join(el.get("class", [])).lower()
+        if any(t in classes for t in OOS_CLASS_TOKENS):
+            return False
+
+    # 2. Botón de carrito deshabilitado: la señal más fiable y sin idioma.
+    controls = _cart_controls(item)
+    if controls and all(_is_disabled(c) for c in controls):
         return False
-    text = item.get_text(" ", strip=True).lower()
-    if any(k in text for k in OOS_KEYWORDS):
+
+    # 3. Texto de agotado, en los idiomas de las tiendas del config.
+    if any(k in item.get_text(" ", strip=True).lower() for k in OOS_KEYWORDS):
         return False
-    return True
+
+    # 4. Marca POSITIVA: hay carrito y está activo.
+    if controls:
+        return True
+    return None
+
+
+def complete_truncated_title(title, link):
+    """Completa un título cortado por el tema ("Dragon Ball SCG: Fusion...") con el
+    slug del enlace, que lleva el nombre entero (".../dragon-ball-scg-fusion-world-
+    case-booster-box-fb12-en").
+
+    Sin esto las keywords de prioridad no casan y un case llega en silencio, o ni
+    pasa el filtro (La Cueva Roja: 0 de 17 productos del 30 aniv). El alt de la
+    imagen NO sirve: La Cueva Roja lo copia de otros productos. El uid HTML sale
+    del enlace, así que completar el título no hace parecer nuevo al producto.
+    """
+    # ".." y no "...": Distrito Zero corta con dos puntos ("NARUTO..").
+    if not link or not title.endswith(("..", "…")):
+        return title
+    slug = urlparse(link).path.rstrip("/").rsplit("/", 1)[-1]
+    slug = re.sub(r"\.html?$", "", slug)
+    slug = re.sub(r"^\d+-", "", slug)       # PrestaShop antepone a veces el id: "90647-nombre"
+    slug = re.sub(r"-\d{8,}$", "", slug)    # Distrito Zero añade el EAN al final
+    if not slug:
+        return title
+    return f"{title.rstrip('.…').strip()} ({slug.replace('-', ' ')})"
 
 
 def extract_products_html(html, site_cfg):
     soup = BeautifulSoup(html, "html.parser")
-    products = []
     items = soup.select(site_cfg["selector"])
-    for item in items:
+    signals = [detect_html_stock_signal(it) for it in items]
+    # Calibración POR LISTADO: si el tema pinta carrito activo en algún producto,
+    # uno que no lo tenga está agotado. Si no lo pinta en NINGUNO, el listado no
+    # informa del stock y se asume disponible (no hay dato con el que decir otra cosa).
+    tiene_marca_positiva = any(s is True for s in signals)
+    # ...pero solo si el listado es mayoritariamente explícito. Isekai pinta
+    # "añadir al carrito" únicamente en los productos SIN variantes (3 de 21) y el
+    # resto, en stock según su ficha, salía agotado: sus novedades no avisaban.
+    if sum(1 for s in signals if s is not None) * 2 < len(signals):
+        tiene_marca_positiva = False
+
+    products = []
+    for item, signal in zip(items, signals):
         title_el = item.select_one(site_cfg["title_selector"])
         title = title_el.get_text(strip=True) if title_el else "Sin título"
 
@@ -258,16 +370,25 @@ def extract_products_html(html, site_cfg):
         link = link_el.get("href", "") if link_el else ""
         if link and not link.startswith("http"):
             link = urljoin(site_cfg["url"], link)
+        title = complete_truncated_title(title, link)
 
         price_el = item.select_one(site_cfg["price_selector"])
         price = price_el.get_text(strip=True) if price_el else "Precio no disponible"
 
-        in_stock = detect_html_in_stock(item)
+        in_stock = signal if signal is not None else not tiene_marca_positiva
         # uid ESTABLE: el enlace, que sobrevive a que la tienda retoque el título.
         uid = hashlib.md5((link or f"{title}").encode()).hexdigest()
         legacy = hashlib.md5(f"{title}{link}".encode()).hexdigest()
         products.append({"uid": uid, "legacy_uid": legacy, "title": title,
                          "link": link, "price": price, "in_stock": in_stock})
+
+    if items:
+        n_oos = sum(1 for p in products if not p["in_stock"])
+        log.info(f"  stock HTML: {len(items) - n_oos} disponibles / {n_oos} agotados")
+        if n_oos == len(items) and len(items) > 5:
+            # Puede ser real, pero también un cambio de tema que lo marque todo
+            # agotado: con notify_only_in_stock eso deja la tienda muda sin fallar.
+            log.warning(f"  el listado entero sale AGOTADO ({len(items)}), revisar si es real")
 
     # Un elemento sin título es inservible: los bots filtran por keyword sobre el
     # título, así que nunca casaría. Si NINGUNO tiene título, los selectores están
@@ -286,13 +407,12 @@ def extract_products_html(html, site_cfg):
     return usable
 
 
-def extract_products_api(data, base_url=""):
+def extract_products_api(data, base_url="", currency="€"):
     """Detección automática: Shopify products.json o WooCommerce Store API."""
     products = []
 
     # Shopify products.json
     if isinstance(data, dict) and "products" in data and data["products"] and "handle" in data["products"][0]:
-        from urllib.parse import urlparse
         base = ""
         if base_url:
             p = urlparse(base_url)
@@ -307,7 +427,10 @@ def extract_products_api(data, base_url=""):
             if variants:
                 p_raw = variants[0].get("price", "")
                 if p_raw:
-                    price = f"{p_raw}€"
+                    # products.json no dice la divisa: la pone el config de la tienda
+                    # (`currency`, por defecto €). Sin esto un case de The Card Vault
+                    # salía a "1436.95€" cuando son libras, y Kantocards va en pesos MXN.
+                    price = f"{p_raw}{currency}"
                 in_stock = any(v.get("available", False) for v in variants)
             # uid ESTABLE: solo el id del producto. Antes incluía el título, así que
             # cualquier retoque del título ("PREVENTA X" -> "X") cambiaba el uid y el
@@ -329,9 +452,9 @@ def extract_products_api(data, base_url=""):
         link = item.get("permalink") or item.get("url", "")
         prices = item.get("prices", {}) or {}
         raw_price = prices.get("price") or "0"
-        currency = prices.get("currency_symbol", "€")
+        symbol = html_mod.unescape(prices.get("currency_symbol") or currency)
         try:
-            price = f"{int(raw_price) / 100:.2f}{currency}"
+            price = f"{int(raw_price) / 100:.2f}{symbol}"
         except (ValueError, TypeError):
             price = "Precio no disponible"
         in_stock = item.get("is_in_stock", item.get("has_stock", True))
@@ -450,6 +573,24 @@ def matches_keywords(title, keywords):
     return any(kw.lower() in t for kw in keywords)
 
 
+def normalize_title(title):
+    """Minúsculas, sin tildes y sin º/°/ª/puntos: "Celebración 30.º" -> "celebracion 30".
+
+    El º se quita ANTES de NFKD, que lo convertiría en una "o" ("30o aniversario").
+    """
+    t = re.sub(r"[º°ª.]", "", title.lower())
+    t = unicodedata.normalize("NFKD", t)
+    return "".join(c for c in t if not unicodedata.combining(c))
+
+
+def matches_patterns(title, patterns):
+    """Regex de `required_patterns` sobre el título normalizado. Cubre variantes que
+    las keywords literales no ven: "30TH CELEBRACIONES", "30º Aniversario", el typo
+    "anniversay" de alguna tienda o "Celebrations 30th" con el orden invertido."""
+    t = normalize_title(title)
+    return any(re.search(p, t) for p in patterns)
+
+
 def normalize_state(raw):
     """Migra state antigua (list de uids) al nuevo schema {uid: {in_stock: bool}}."""
     if isinstance(raw, list):
@@ -498,7 +639,6 @@ def fetch_site(site_cfg, config, timeout=None, attempts=2):
 
     headers = build_headers(config["user_agent"], is_api=is_api)
     if is_api:
-        from urllib.parse import urlparse
         p = urlparse(url)
         headers["Referer"] = f"{p.scheme}://{p.netloc}/"
 
@@ -512,7 +652,9 @@ def fetch_site(site_cfg, config, timeout=None, attempts=2):
                 if "json" not in ctype:
                     # Cloudflare/anti-bot devolvió HTML en vez del JSON
                     raise ValueError(f"respuesta no-JSON (Content-Type: {ctype or 'desconocido'})")
-                return site_cfg, extract_products_api(resp.json(), base_url=url), None
+                return site_cfg, extract_products_api(
+                    resp.json(), base_url=url, currency=site_cfg.get("currency", "€")
+                ), None
             return site_cfg, extract_products_html(resp.text, site_cfg), None
         except Exception as e:
             last_err = e
@@ -520,6 +662,38 @@ def fetch_site(site_cfg, config, timeout=None, attempts=2):
                 time.sleep(2)
     log.warning(f"  {name} no disponible: {last_err}")
     return site_cfg, None, str(last_err)
+
+
+# Lo que decide QUÉ productos ve el bot en una tienda. Si cambia (URL nueva, más
+# resultados por página, keywords nuevas...), aparecen de golpe productos que ya
+# existían y que el state no conocía -> tanda de falsos "NUEVO". Antes había que
+# acordarse de RENOMBRAR la tienda o borrar la caché; ahora la firma lo detecta.
+SITE_SIG_FIELDS = ("url", "type", "selector", "title_selector", "link_selector", "exclude_keywords")
+GLOBAL_SIG_FIELDS = ("required_keywords", "required_any_keywords", "required_patterns", "exclude_keywords")
+# Subir cuando un cambio del MOTOR amplíe lo que se ve (p. ej. completar títulos
+# cortados, que hizo pasar el filtro a productos que antes no lo pasaban).
+COVERAGE_VERSION = 1
+
+
+def site_signature(site_cfg, config):
+    data = {"site": {k: site_cfg.get(k) for k in SITE_SIG_FIELDS},
+            "global": {k: config.get(k) for k in GLOBAL_SIG_FIELDS},
+            "engine": COVERAGE_VERSION}
+    return hashlib.md5(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def mark_priority(p, config):
+    """Marca 🔥 / 🚨 / 🎁 según las keywords del config. `priority_exclude` quita
+    la marca (no el producto) a los accesorios que comparten palabra con el
+    sellado: fundas "Display 12 unidades", "Card Case", sleeves "Tournament"...
+    Así siguen llegando, pero en silencio."""
+    if matches_keywords(p["title"], config.get("priority_exclude", [])):
+        p["top_priority"] = p["high_value"] = p["promo"] = False
+        return p
+    p["top_priority"] = matches_keywords(p["title"], config.get("top_priority_keywords", []))
+    p["high_value"] = matches_keywords(p["title"], config.get("high_value_keywords", []))
+    p["promo"] = matches_keywords(p["title"], config.get("promo_keywords", []))
+    return p
 
 
 def process_site(site_cfg, products, state, config):
@@ -532,32 +706,54 @@ def process_site(site_cfg, products, state, config):
     """
     name = site_cfg["name"]
     required_keywords = config.get("required_keywords", [])
-    exclude_keywords = config.get("exclude_keywords", [])
+    # Segundo filtro opcional (Y lógico con required_keywords): el título debe llevar
+    # además un término de juego de cartas. Las búsquedas de tiendas generalistas
+    # devuelven sobre todo merch (llaveros, tazas, cómics...).
+    required_any_keywords = config.get("required_any_keywords", [])
+    # Regex opcionales (O lógico con required_keywords) sobre el título normalizado.
+    required_patterns = config.get("required_patterns", [])
+    # Exclusiones propias de una tienda (p. ej. una colección "30th" llena de
+    # singles), que se suman a las globales.
+    exclude_keywords = config.get("exclude_keywords", []) + site_cfg.get("exclude_keywords", [])
     notify_only_in_stock = config.get("notify_only_in_stock", True)
-    top_priority_keywords = config.get("top_priority_keywords", [])
-    high_value_keywords = config.get("high_value_keywords", [])
-    promo_keywords = config.get("promo_keywords", [])
+    # Las preventas suelen publicarse agotadas/"Próximamente" antes de abrir la
+    # reserva. Con esto, un listado NUEVO de valor alto avisa aunque no haya stock.
+    notify_new_oos_priority = config.get("notify_new_oos_priority", False)
     match_label = config.get("match_label", "el filtro")
 
-    if required_keywords:
+    if required_keywords or required_patterns:
+        def requerido(t):
+            return matches_keywords(t, required_keywords) or \
+                bool(required_patterns and matches_patterns(t, required_patterns))
+
         filtered = [
             p for p in products
-            if matches_keywords(p["title"], required_keywords)
+            if requerido(p["title"])
+            and (not required_any_keywords or matches_keywords(p["title"], required_any_keywords))
             and not (exclude_keywords and matches_keywords(p["title"], exclude_keywords))
         ]
         n_excl = sum(
             1 for p in products
-            if matches_keywords(p["title"], required_keywords)
+            if requerido(p["title"])
             and exclude_keywords and matches_keywords(p["title"], exclude_keywords)
         )
         log.info(f"  {name}: {len(products)} detectados, {len(filtered)} matchean {match_label}"
                  + (f" ({n_excl} descartados por exclusión)" if n_excl else ""))
         products = filtered
+    elif exclude_keywords:
+        products = [p for p in products if not matches_keywords(p["title"], exclude_keywords)]
+        log.info(f"  {name}: {len(products)} productos detectados (tras exclusiones)")
     else:
         log.info(f"  {name}: {len(products)} productos detectados")
 
     raw_prev = state.get(name)
     is_first_run = raw_prev is None
+    # La URL o los filtros han cambiado desde la última vez (o es el primer
+    # despliegue con firmas): lo que aparezca ahora y no estuviera en el state ya
+    # existía, solo que el bot no lo veía. Se absorbe en silencio; los restocks de
+    # productos conocidos SÍ se avisan.
+    rebaseline = not is_first_run and \
+        state.get(SIG_KEY, {}).get(name) != site_signature(site_cfg, config)
     # COPIA: normalize_state devuelve el mismo dict que está dentro de `state`
     # cuando ya es un dict. Sin copiar, marcar un producto como visto mutaría el
     # state en el sitio aunque luego el envío a Telegram fallara, y el aviso se
@@ -576,6 +772,7 @@ def process_site(site_cfg, products, state, config):
         return [], site_state
 
     alerts = []
+    absorbidos = 0
     for p in products:
         uid = p["uid"]
         prev = site_state.get(uid)
@@ -585,13 +782,15 @@ def process_site(site_cfg, products, state, config):
             # la nueva. Sin esto, el cambio de esquema haría parecer NUEVO todo el
             # catálogo y dispararía una tanda enorme de avisos falsos.
             prev = site_state.pop(p["legacy_uid"], None)
-        p["top_priority"] = matches_keywords(p["title"], top_priority_keywords)
-        p["high_value"] = matches_keywords(p["title"], high_value_keywords)
-        p["promo"] = matches_keywords(p["title"], promo_keywords)
+        mark_priority(p, config)
         if prev is None:
             # Producto nuevo
-            if not is_first_run:
-                if p["in_stock"] or not notify_only_in_stock:
+            if rebaseline:
+                absorbidos += 1
+            elif not is_first_run:
+                prioritario = p["top_priority"] or p["high_value"]
+                if p["in_stock"] or not notify_only_in_stock or \
+                        (notify_new_oos_priority and prioritario):
                     alerts.append({**p, "alert_type": "new"})
             else:
                 # Primera ejecución: solo notifica los que están en stock (baseline)
@@ -604,6 +803,9 @@ def process_site(site_cfg, products, state, config):
                 alerts.append({**p, "alert_type": "restock"})
         site_state[uid] = {"in_stock": p["in_stock"]}
 
+    if rebaseline:
+        log.info(f"  {name}: URL/filtros cambiados -> re-baseline silencioso "
+                 f"({absorbidos} productos que antes no se veían)")
     return alerts, site_state
 
 
@@ -699,6 +901,8 @@ def run_once(priority_filter=None):
         log.error("⚠️  Falta TELEGRAM_BOT_TOKEN (env o config.json)")
         sys.exit(1)
 
+    prune_state(state, config)
+
     sites = config["sites"]
     if priority_filter:
         sites = [s for s in sites if s.get("priority", "medium") == priority_filter]
@@ -735,29 +939,43 @@ def run_once(priority_filter=None):
 
     # --- 2) Proceso SECUENCIAL contra el state (evita carreras) ---
     pending = []
+    sigs, dominios = {}, {}
+    n_ok = 0
     for site_cfg, products, err in results:
         name = site_cfg["name"]
         if products is None:
             _record_health(state, name, ok=False, error=err)
             continue
+        n_ok += 1
         _record_health(state, name, ok=True, n_products=len(products))
+        sigs[name] = site_signature(site_cfg, config)
+        dominios[name] = urlparse(site_cfg["url"]).netloc.lower().removeprefix("www.")
         alerts, new_site_state = process_site(site_cfg, products, state, config)
         pending.append((name, site_cfg.get("priority", "medium"), alerts, new_site_state))
 
+    def commit(name, site_state):
+        # El state de la tienda y la firma con la que se vio van SIEMPRE juntos: si
+        # el aviso no sale, ninguno de los dos se actualiza y se reintenta entero.
+        state[name] = site_state
+        state.setdefault(SIG_KEY, {})[name] = sigs[name]
+
     # --- 3) Envío; el state de un sitio solo se persiste si su aviso salió ---
-    # El uid de Shopify es md5(id_de_producto + título): el MISMO artículo listado en
-    # varias colecciones de la MISMA tienda (Pokemillon está en Eternals + Reservas +
-    # Novedades + Cajas de Sobres) comparte uid. Sin esto llegaban hasta 4 Telegram
-    # seguidos con el mismo enlace. Como `pending` va en orden de prioridad, avisa la
-    # entrada más prioritaria y las demás lo dan por visto sin repetirlo.
+    # El uid de Shopify es md5("shopify:" + id_de_producto): el MISMO artículo
+    # listado en varias colecciones de la MISMA tienda (Pokemillon está en Eternals +
+    # Reservas + Novedades + Cajas de Sobres) comparte uid. Sin esto llegaban hasta 4
+    # Telegram seguidos con el mismo enlace. Como `pending` va en orden de prioridad,
+    # avisa la entrada más prioritaria y las demás lo dan por visto sin repetirlo.
+    # La clave lleva el DOMINIO: en WooCommerce el uid es md5("woo:" + id) y los ids
+    # son enteros pequeños, así que dos tiendas distintas pueden compartirlo; sin el
+    # dominio, el aviso de la segunda se descartaba y se daba por visto.
     seen_uids = set()
     n_alertas = 0
     con_alertas = []
     for name, priority, alerts, new_site_state in pending:
-        alerts = [a for a in alerts if a["uid"] not in seen_uids]
-        seen_uids.update(a["uid"] for a in alerts)
+        alerts = [a for a in alerts if (dominios[name], a["uid"]) not in seen_uids]
+        seen_uids.update((dominios[name], a["uid"]) for a in alerts)
         if not alerts:
-            state[name] = new_site_state
+            commit(name, new_site_state)
             continue
         n_new = sum(1 for a in alerts if a["alert_type"] == "new")
         n_re = sum(1 for a in alerts if a["alert_type"] == "restock")
@@ -776,7 +994,7 @@ def run_once(priority_filter=None):
         silent = solo_prioritarios and not is_loud(todas)
         if send_telegram_chunks(bot_token, chat_id, msgs, silent=silent):
             for name, _, alerts, new_site_state in con_alertas:
-                state[name] = new_site_state
+                commit(name, new_site_state)
                 n_alertas += len(alerts)
         else:
             log.error("Aviso de avalancha NO enviado -> nada se marca como visto, "
@@ -786,7 +1004,7 @@ def run_once(priority_filter=None):
             msgs = format_notification(name, priority, alerts, config)
             silent = solo_prioritarios and not is_loud(alerts)
             if send_telegram_chunks(bot_token, chat_id, msgs, silent=silent):
-                state[name] = new_site_state
+                commit(name, new_site_state)
                 n_alertas += len(alerts)
             else:
                 log.error(f"{name}: aviso NO enviado -> no se marca como visto, "
@@ -798,9 +1016,87 @@ def run_once(priority_filter=None):
         if not send_telegram(bot_token, chat_id, msg, silent=True):
             deshacer_salud()
 
+    # Prueba de vida para el heartbeat: sin esto decía "bot vivo" aunque cada
+    # pasada petara (el heartbeat corre aparte y no se enteraba).
+    state[RUN_META_KEY] = {"last_run": time.time(), "sites_ok": n_ok,
+                           "sites_failed": len(results) - n_ok, "skipped": len(saltadas)}
     save_state(state)
     if not n_alertas:
         log.info("Sin alertas en esta revisión")
+
+
+def prune_state(state, config):
+    """Borra del state las tiendas que ya no están en config.json.
+
+    Al reapuntar o quitar una tienda su entrada se quedaba huérfana para siempre:
+    engordaba el state y el heartbeat la seguía contando como tienda vigilada.
+    Solo se mira config["sites"] completo (nunca el filtrado por prioridad), así
+    que un `--priority high` no borra las tiendas medium.
+    """
+    nombres = {s["name"] for s in config["sites"]}
+    huerfanas = [k for k in state if not k.startswith("__") and k not in nombres]
+    for k in huerfanas:
+        del state[k]
+    for key in (HEALTH_KEY, SIG_KEY):
+        sub = state.get(key, {})
+        for k in [k for k in sub if k not in nombres]:
+            del sub[k]
+    if huerfanas:
+        log.info(f"State: {len(huerfanas)} tiendas que ya no están en config, borradas "
+                 f"({', '.join(huerfanas[:5])}{'...' if len(huerfanas) > 5 else ''})")
+
+
+def notify_crash(exc_text):
+    """Avisa UNA vez si monitor.py peta (config mal escrita, bug tras un push...).
+
+    El bucle del workflow hace `python3 monitor.py || echo ...` y sigue: un error
+    en cada pasada dejaba el bot ciego horas sin que nadie se enterase, con el run
+    en verde y el heartbeat diciendo "vivo". El fichero marca evita repetir el
+    mismo aviso en cada pasada; vive en el disco del runner, así que como mucho
+    se repite una vez por bloque de 5h30m mientras siga roto.
+    """
+    firma = hashlib.md5(exc_text.strip().splitlines()[-1].encode()).hexdigest()
+    try:
+        if CRASH_FLAG.exists() and CRASH_FLAG.read_text().strip() == firma:
+            return
+    except OSError:
+        pass
+    token, chat = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
+    if not (token and chat):
+        try:
+            cfg = load_config()
+            token, chat = token or cfg.get("telegram_bot_token"), chat or cfg.get("telegram_chat_id")
+        except Exception:
+            return
+    label = "MONITOR"
+    try:
+        label = load_config().get("bot_label", label)
+    except Exception:
+        pass
+    msg = (f"💥 <b>{html_mod.escape(label)}: monitor.py está fallando</b>\n"
+           f"El bot NO está vigilando tiendas hasta que se arregle.\n\n"
+           f"<pre>{html_mod.escape(exc_text[-1500:])}</pre>")
+    if send_telegram(token, chat, msg, attempts=2):
+        try:
+            CRASH_FLAG.write_text(firma)
+        except OSError:
+            pass
+
+
+def run_once_guarded(priority_filter=None):
+    try:
+        run_once(priority_filter=priority_filter)
+    except SystemExit:
+        raise
+    except Exception:
+        notify_crash(traceback.format_exc())
+        raise
+    if CRASH_FLAG.exists():
+        try:
+            CRASH_FLAG.unlink()
+        except OSError:
+            pass
+        log.info("monitor.py vuelve a funcionar tras un fallo")
 
 
 def run_loop(priority_filter=None):
@@ -811,7 +1107,10 @@ def run_loop(priority_filter=None):
         interval = config.get("check_interval_minutes", 15) * 60
     log.info(f"Monitor en bucle (cada {interval // 60} min, filtro={priority_filter or 'todos'})")
     while True:
-        run_once(priority_filter=priority_filter)
+        try:
+            run_once_guarded(priority_filter=priority_filter)
+        except Exception:
+            log.exception("Pasada fallida, sigo con la siguiente")
         log.info(f"Esperando {interval // 60} minutos...")
         time.sleep(interval)
 
@@ -824,4 +1123,4 @@ if __name__ == "__main__":
     if args.loop:
         run_loop(priority_filter=args.priority)
     else:
-        run_once(priority_filter=args.priority)
+        run_once_guarded(priority_filter=args.priority)

@@ -7,6 +7,7 @@ Pokémon TCG en España (sin necesidad de API oficial de X).
 en cadena y avisa por Telegram si TODOS fallan (para que sepas que necesitas
 actualizar la lista de mirrors).
 """
+import html
 import json
 import os
 import sys
@@ -88,11 +89,26 @@ def matches(text):
 
 
 def send_telegram(msg):
-    requests.post(
-        f"https://api.telegram.org/bot{bot_token}/sendMessage",
-        json={"chat_id": chat_id, "text": msg, "parse_mode": "HTML", "disable_web_page_preview": False},
-        timeout=15,
-    )
+    """Devuelve True si Telegram aceptó el mensaje. Antes no se miraba la respuesta:
+    un 400 (HTML inválido) perdía el aviso sin dejar rastro."""
+    try:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={"chat_id": chat_id, "text": msg, "parse_mode": "HTML", "disable_web_page_preview": False},
+            timeout=15,
+        )
+    except requests.RequestException as e:
+        print(f"Telegram, error de red: {e}")
+        return False
+    if resp.status_code != 200:
+        print(f"Telegram {resp.status_code}: {resp.text[:300]}")
+        return False
+    return True
+
+
+def _tweet_order(tid):
+    """Los ids de tweet son numéricos y crecientes: sirven para ordenar por antigüedad."""
+    return (0, int(tid)) if tid.isdigit() else (1, 0)
 
 
 def main():
@@ -118,7 +134,10 @@ def main():
                 continue  # primer run: baseline silent
             if matches(text):
                 new_for_acc.append((acc, text, link))
-        state[acc] = list(seen)[-100:]  # mantener últimos 100 ids
+        # Mantener los 100 ids MÁS RECIENTES. Antes era list(seen)[-100:] sobre un set,
+        # que no tiene orden: se podían quedar fuera ids recién vistos y esos tweets
+        # volvían a avisarse como nuevos en la siguiente ejecución.
+        state[acc] = sorted(seen, key=_tweet_order)[-100:]
         new_alerts.extend(new_for_acc)
         print(f"[OK]   @{acc} via {mirror}: {len(tweets)} tweets, {len(new_for_acc)} matchean")
 
@@ -131,9 +150,13 @@ def main():
         )
 
     for acc, text, link in new_alerts:
-        msg = f"🐦 <b>@{acc}</b>\n\n{text[:500]}\n\n🔗 {link}"
-        send_telegram(msg)
-        print(f"Notificado: {acc} — {text[:80]}")
+        # Escapado obligatorio con parse_mode HTML: un "&" o "<" del tweet daba 400.
+        msg = (f"🐦 <b>@{html.escape(acc)}</b>\n\n{html.escape(text[:500])}"
+               f"\n\n🔗 {html.escape(link)}")
+        if send_telegram(msg):
+            print(f"Notificado: {acc} — {text[:80]}")
+        else:
+            print(f"NO notificado: {acc} — {text[:80]}")
 
 
 if __name__ == "__main__":

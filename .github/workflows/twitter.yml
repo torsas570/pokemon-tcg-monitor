@@ -1,8 +1,13 @@
 name: Monitor Twitter Pokemon Drops
 
 on:
-  schedule:
-    - cron: '*/10 * * * *'  # Cada 10 min
+  # schedule DESACTIVADO (05/10/2026): los 4 mirrors de Nitter están muertos
+  # (nitter.net, nitter.privacydev.net y nitter.poast.org no conectan; xcancel.com
+  # devuelve 451). Con el cron activo, cada ejecución mandaba un aviso de
+  # "Twitter monitor caído". Además GitHub lo estrangulaba: se ejecutaba cada 3-6 h,
+  # no cada 10 min. Reactivar solo con una fuente que funcione. Lanzable a mano.
+  # schedule:
+  #   - cron: '*/10 * * * *'  # Cada 10 min
   workflow_dispatch:
 
 jobs:

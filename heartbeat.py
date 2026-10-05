@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -17,9 +18,13 @@ chat_id = os.environ.get("TELEGRAM_CHAT_ID") or CONFIG["telegram_chat_id"]
 
 state = json.load(open(STATE_PATH)) if STATE_PATH.exists() else {}
 
-RESERVED = ("__health__", "__health_meta__")
-health = state.get("__health__", {})
-sites = {k: v for k, v in state.items() if k not in RESERVED and isinstance(v, dict)}
+# Solo tiendas que siguen en config.json: las claves reservadas ("__health__",
+# "__sig__", "__run__"...) empiezan por "__", y una tienda renombrada dejaba su
+# entrada vieja contando como tienda vigilada.
+_nombres = {s["name"] for s in CONFIG["sites"]}
+health = {k: v for k, v in state.get("__health__", {}).items() if k in _nombres}
+sites = {k: v for k, v in state.items()
+         if k in _nombres and isinstance(v, dict)}
 
 n_sites_cfg = len(CONFIG["sites"])
 n_sites_tracked = len(sites)
@@ -52,10 +57,25 @@ if ciegas:
 if not salud:
     salud = "\n💚 Todas las tiendas responden"
 
+# Prueba de vida REAL: monitor.py apunta en "__run__" cuándo completó su última
+# pasada. Antes este mensaje decía "bot vivo" siempre, aunque monitor.py petara en
+# cada pasada. El state llega por la caché, que el bucle guarda al acabar cada
+# bloque de ~5h30m, así que lo normal es que tenga hasta ~6 h; más de 7 h = parado.
+_run = state.get("__run__", {})
+_edad_h = (time.time() - _run["last_run"]) / 3600 if _run.get("last_run") else None
+if _edad_h is None:
+    vida = "ℹ️ Sin pasadas registradas todavía (versión nueva recién desplegada)"
+elif _edad_h > 7:
+    vida = (f"🛑 <b>La última pasada guardada es de hace {_edad_h:.0f} h</b>: "
+            f"el bucle puede estar parado. Revisa GitHub Actions.")
+else:
+    vida = (f"✅ Bot vivo: última pasada guardada hace {_edad_h:.1f} h "
+            f"({_run.get('sites_ok', '?')} tiendas OK, {_run.get('sites_failed', '?')} con fallo)")
+
 msg = (
     f"💓 <b>Heartbeat Pokémon TCG 30 Aniv</b>\n"
     f"📅 {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n\n"
-    f"✅ Bot vivo y funcionando\n"
+    f"{vida}\n"
     f"🏪 Tiendas configuradas: {n_sites_cfg}\n"
     f"📊 Tiendas con datos: {n_sites_tracked}\n"
     f"📦 Productos 30 aniv tracked: {total_products}\n"
