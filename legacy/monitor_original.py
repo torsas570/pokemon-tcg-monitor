@@ -28,7 +28,7 @@ import traceback
 import html as html_mod
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from urllib.parse import urljoin, urlparse, parse_qs
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -458,20 +458,12 @@ def extract_products_api(data, base_url="", currency="€"):
         except (ValueError, TypeError):
             price = "Precio no disponible"
         in_stock = item.get("is_in_stock", item.get("has_stock", True))
-        # La Store API dice cuántas quedan ("Solo quedan 1 disponibles"), que en un
-        # bot de restock vale tanto como el propio aviso. is_purchasable NO sirve:
-        # varias tiendas lo devuelven true incluso con el producto agotado.
-        availability = item.get("stock_availability") or {}
-        stock_text = ""
-        if isinstance(availability, dict):
-            stock_text = html_mod.unescape(availability.get("text") or "")
         pid = item.get("id", "")
         uid = hashlib.md5(f"woo:{pid}".encode()).hexdigest() if pid else \
             hashlib.md5(f"{pid}{title}".encode()).hexdigest()
         legacy = hashlib.md5(f"{pid}{title}".encode()).hexdigest()
         products.append({"uid": uid, "legacy_uid": legacy, "title": title,
-                         "link": link, "price": price, "in_stock": in_stock,
-                         "stock_text": stock_text, "backorder": bool(item.get("is_on_backorder"))})
+                         "link": link, "price": price, "in_stock": in_stock})
     return products
 
 
@@ -527,19 +519,11 @@ def send_telegram_chunks(bot_token, chat_id, messages, silent=False):
     return ok
 
 
-def is_priority(p, config=None):
-    """¿Es de los que importan? 🔥 y 🚨 siempre; 🎁 solo si el bot lo pide con
-    `sound_for_promo` (One Piece: los promos de revista/torneo son caza mayor)."""
-    if p.get("top_priority") or p.get("high_value"):
-        return True
-    return bool(p.get("promo") and (config or {}).get("sound_for_promo", False))
-
-
-def is_loud(alerts, config=None):
-    """¿Merece este aviso hacer sonar el móvil? Solo si lleva algo prioritario
+def is_loud(alerts):
+    """¿Merece este aviso hacer sonar el móvil? Solo si lleva algo marcado 🔥/🚨
     (UPC, booster box, case, ETB...). Una lata o un blíster llegan al chat en
     silencio: así lo gordo no se pierde entre lo flojo."""
-    return any(is_priority(a, config) for a in alerts)
+    return any(a.get("top_priority") or a.get("high_value") for a in alerts)
 
 
 def _chunk_message(title_line, blocks):
@@ -692,12 +676,7 @@ COVERAGE_VERSION = 1
 
 
 def site_signature(site_cfg, config):
-    site = {k: site_cfg.get(k) for k in SITE_SIG_FIELDS}
-    # Solo si la tienda lo usa: así las firmas de las tiendas sin include_keywords
-    # no cambian respecto a las ya guardadas.
-    if site_cfg.get("include_keywords"):
-        site["include_keywords"] = site_cfg["include_keywords"]
-    data = {"site": site,
+    data = {"site": {k: site_cfg.get(k) for k in SITE_SIG_FIELDS},
             "global": {k: config.get(k) for k in GLOBAL_SIG_FIELDS},
             "engine": COVERAGE_VERSION}
     return hashlib.md5(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
@@ -717,33 +696,15 @@ def mark_priority(p, config):
     return p
 
 
-def requested_cap(url):
-    """Tope de resultados que pide la URL (limit / per_page / resultsPerPage).
-
-    Si el listado vuelve LLENO hasta el tope, lo que sobra entra y sale entre
-    pasadas según el orden de la tienda: ahí no se puede deducir nada de que un
-    producto "desaparezca".
-    """
-    query = parse_qs(urlparse(url).query)
-    for key, values in query.items():
-        if key.lower() in ("limit", "per_page", "resultsperpage") and values:
-            try:
-                return int(values[0])
-            except (TypeError, ValueError):
-                pass
-    return None
-
-
 def process_site(site_cfg, products, state, config):
     """Filtra por keywords y compara con el state.
 
-    Devuelve (alertas, nuevo_state_del_sitio, nº absorbidos por re-sync). NO
-    escribe en `state`: quien llama solo lo persiste si el aviso de esta tienda
-    llegó a Telegram; si el envío falla, el state viejo se conserva y el producto
-    se vuelve a avisar en la siguiente pasada en vez de darse por visto.
+    Devuelve (alertas, nuevo_state_del_sitio). NO escribe en `state`: quien llama
+    solo lo persiste si el aviso de esta tienda llegó a Telegram; si el envío
+    falla, el state viejo se conserva y el producto se vuelve a avisar en la
+    siguiente pasada en vez de darse por visto y perderse para siempre.
     """
     name = site_cfg["name"]
-    url = site_cfg["url"]
     required_keywords = config.get("required_keywords", [])
     # Segundo filtro opcional (Y lógico con required_keywords): el título debe llevar
     # además un término de juego de cartas. Las búsquedas de tiendas generalistas
@@ -751,42 +712,39 @@ def process_site(site_cfg, products, state, config):
     required_any_keywords = config.get("required_any_keywords", [])
     # Regex opcionales (O lógico con required_keywords) sobre el título normalizado.
     required_patterns = config.get("required_patterns", [])
-    # Filtros propios de una tienda, para feeds mixtos (preventas de varios juegos,
-    # colecciones con singles o merch): include obliga, exclude se suma al global.
-    include_keywords = site_cfg.get("include_keywords", [])
+    # Exclusiones propias de una tienda (p. ej. una colección "30th" llena de
+    # singles), que se suman a las globales.
     exclude_keywords = config.get("exclude_keywords", []) + site_cfg.get("exclude_keywords", [])
     notify_only_in_stock = config.get("notify_only_in_stock", True)
     # Las preventas suelen publicarse agotadas/"Próximamente" antes de abrir la
     # reserva. Con esto, un listado NUEVO de valor alto avisa aunque no haya stock.
     notify_new_oos_priority = config.get("notify_new_oos_priority", False)
-    resync_threshold = config.get("resync_threshold")
     match_label = config.get("match_label", "el filtro")
 
-    # El tope se mide sobre el listado CRUDO, antes de filtrar por keywords.
-    cap = requested_cap(url)
-    truncado = cap is not None and len(products) >= cap
-
-    n_antes = len(products)
     if required_keywords or required_patterns:
         def requerido(t):
             return matches_keywords(t, required_keywords) or \
                 bool(required_patterns and matches_patterns(t, required_patterns))
-        products = [p for p in products if requerido(p["title"])
-                    and (not required_any_keywords or matches_keywords(p["title"], required_any_keywords))]
-    if include_keywords:
-        products = [p for p in products if matches_keywords(p["title"], include_keywords)]
-    n_excl = 0
-    if exclude_keywords:
-        n_excl = sum(1 for p in products if matches_keywords(p["title"], exclude_keywords))
-        products = [p for p in products if not matches_keywords(p["title"], exclude_keywords)]
-    if len(products) != n_antes or n_excl:
-        log.info(f"  {name}: {n_antes} detectados, {len(products)} matchean {match_label}"
+
+        filtered = [
+            p for p in products
+            if requerido(p["title"])
+            and (not required_any_keywords or matches_keywords(p["title"], required_any_keywords))
+            and not (exclude_keywords and matches_keywords(p["title"], exclude_keywords))
+        ]
+        n_excl = sum(
+            1 for p in products
+            if requerido(p["title"])
+            and exclude_keywords and matches_keywords(p["title"], exclude_keywords)
+        )
+        log.info(f"  {name}: {len(products)} detectados, {len(filtered)} matchean {match_label}"
                  + (f" ({n_excl} descartados por exclusión)" if n_excl else ""))
+        products = filtered
+    elif exclude_keywords:
+        products = [p for p in products if not matches_keywords(p["title"], exclude_keywords)]
+        log.info(f"  {name}: {len(products)} productos detectados (tras exclusiones)")
     else:
-        log.info(f"  {name}: {n_antes} productos detectados")
-    if truncado:
-        log.warning(f"  {name}: listado LLENO hasta el tope ({cap}), puede haber "
-                    f"productos fuera; no se miran desapariciones")
+        log.info(f"  {name}: {len(products)} productos detectados")
 
     raw_prev = state.get(name)
     is_first_run = raw_prev is None
@@ -802,7 +760,7 @@ def process_site(site_cfg, products, state, config):
     # perdería igualmente (que es justo lo que esto viene a evitar).
     site_state = dict(normalize_state(raw_prev))
     if not products:
-        return [], site_state, 0
+        return [], site_state
 
     # Baseline de la PRIMERA pasada de una tienda. Con `silent_first_run` se absorbe
     # todo lo existente sin avisar (lo que quieren los bots cuyo juego ya tiene
@@ -811,7 +769,7 @@ def process_site(site_cfg, products, state, config):
         for p in products:
             site_state[p["uid"]] = {"in_stock": p["in_stock"]}
         log.info(f"  {name}: baseline inicial silenciado ({len(products)} productos)")
-        return [], site_state, 0
+        return [], site_state
 
     alerts = []
     absorbidos = 0
@@ -830,8 +788,9 @@ def process_site(site_cfg, products, state, config):
             if rebaseline:
                 absorbidos += 1
             elif not is_first_run:
+                prioritario = p["top_priority"] or p["high_value"]
                 if p["in_stock"] or not notify_only_in_stock or \
-                        (notify_new_oos_priority and is_priority(p, config)):
+                        (notify_new_oos_priority and prioritario):
                     alerts.append({**p, "alert_type": "new"})
             else:
                 # Primera ejecución: solo notifica los que están en stock (baseline)
@@ -847,42 +806,7 @@ def process_site(site_cfg, products, state, config):
     if rebaseline:
         log.info(f"  {name}: URL/filtros cambiados -> re-baseline silencioso "
                  f"({absorbidos} productos que antes no se veían)")
-
-    # Tiendas que OCULTAN del listado lo que se agota (Isekai Alcorcón): allí el
-    # restock es que el producto REAPARECE. Como el uid no cambia y en el state
-    # seguía como disponible, no saltaba nada. Marcándolo agotado al desaparecer,
-    # la reaparición dispara el 🔄 RESTOCK por el camino normal. Opcional
-    # (`mark_disappeared_oos`). No se aplica con el listado al tope (rotarían
-    # productos y darían falsos restocks) ni si desaparece media tienda de golpe.
-    if config.get("mark_disappeared_oos", False) and not is_first_run and not truncado:
-        vistos = {p["uid"] for p in products} | {p.get("legacy_uid") for p in products}
-        desaparecidos = [uid for uid, prev in site_state.items()
-                         if uid not in vistos and prev.get("in_stock", True)]
-        limite = max(5, len(products) // 2)
-        if len(desaparecidos) > limite:
-            log.warning(f"  {name}: {len(desaparecidos)} productos desaparecidos de golpe "
-                        f"(> {limite}), listado anómalo: no se marcan")
-        elif desaparecidos:
-            for uid in desaparecidos:
-                site_state[uid] = {"in_stock": False, "gone": True}
-            log.info(f"  {name}: {len(desaparecidos)} desaparecidos del listado, "
-                     f"marcados agotados (avisarán si reaparecen)")
-
-    # Re-sync (opcional, `resync_threshold`): una tienda no publica 20 novedades
-    # reales en una pasada de 2 minutos. Si pasa, ha recatalogado o cambiado el
-    # orden de la colección: lo flojo se absorbe con UN aviso de una línea, pero lo
-    # prioritario y los restocks se avisan SIEMPRE (el día que una tienda sube el
-    # set entero de golpe, el case va dentro y no se puede perder).
-    n_new = sum(1 for a in alerts if a["alert_type"] == "new")
-    if resync_threshold and n_new > resync_threshold:
-        keep = [a for a in alerts if a["alert_type"] == "restock"
-                or is_priority(a, config) or a.get("promo")]
-        n_absorbidos = n_new - sum(1 for a in keep if a["alert_type"] == "new")
-        log.info(f"  {name}: {n_new} nuevos de golpe > umbral {resync_threshold}, "
-                 f"re-sync: {n_absorbidos} absorbidos, {len(keep)} avisados")
-        return keep, site_state, n_absorbidos
-
-    return alerts, site_state, 0
+    return alerts, site_state
 
 
 def format_notification(site_name, priority, alerts, config=None):
@@ -909,11 +833,7 @@ def format_notification(site_name, priority, alerts, config=None):
         # Escapado obligatorio: un '<' o un '&' suelto en el título rompe el
         # parse_mode HTML, Telegram devuelve 400 y el aviso se pierde entero.
         b = [f"• {mark}{tag}{stock_mark} <b>{html_mod.escape(p['title'])}</b>",
-             f"  💰 {html_mod.escape(p['price'])}" + (" ⏳ bajo pedido" if p.get("backorder") else "")]
-        # "Solo quedan 1 disponibles" (Store API de WooCommerce). Si está agotado
-        # ya lo dice AGOTADO.
-        if p.get("stock_text") and p["in_stock"]:
-            b.append(f"  📊 {html_mod.escape(p['stock_text'])}")
+             f"  💰 {html_mod.escape(p['price'])}"]
         if p["link"]:
             b.append(f"  🔗 {p['link']}")
         b.append("")
@@ -961,10 +881,7 @@ def format_avalanche(entradas, config):
         tag = "🔄" if a["alert_type"] == "restock" else "🆕"
         stock_mark = "" if a["in_stock"] else " ⚠️ AGOTADO"
         b = [f"{mark} {tag} <b>{html_mod.escape(a['title'])}</b>{stock_mark}",
-             f"  💰 {html_mod.escape(a['price'])}" + (" ⏳ bajo pedido" if a.get("backorder") else "")
-             + f" — <i>{html_mod.escape(tienda)}</i>"]
-        if a.get("stock_text") and a["in_stock"]:
-            b.append(f"  📊 {html_mod.escape(a['stock_text'])}")
+             f"  💰 {html_mod.escape(a['price'])} — <i>{html_mod.escape(tienda)}</i>"]
         if a["link"]:
             b.append(f"  🔗 {a['link']}")
         b.append("")
@@ -1021,7 +938,7 @@ def run_once(priority_filter=None):
              f"({workers} hilos){extra}")
 
     # --- 2) Proceso SECUENCIAL contra el state (evita carreras) ---
-    pending, resyncs = [], []
+    pending = []
     sigs, dominios = {}, {}
     n_ok = 0
     for site_cfg, products, err in results:
@@ -1033,10 +950,8 @@ def run_once(priority_filter=None):
         _record_health(state, name, ok=True, n_products=len(products))
         sigs[name] = site_signature(site_cfg, config)
         dominios[name] = urlparse(site_cfg["url"]).netloc.lower().removeprefix("www.")
-        alerts, new_site_state, n_resync = process_site(site_cfg, products, state, config)
+        alerts, new_site_state = process_site(site_cfg, products, state, config)
         pending.append((name, site_cfg.get("priority", "medium"), alerts, new_site_state))
-        if n_resync:
-            resyncs.append((name, n_resync))
 
     def commit(name, site_state):
         # El state de la tienda y la firma con la que se vio van SIEMPRE juntos: si
@@ -1076,7 +991,7 @@ def run_once(priority_filter=None):
         log.info(f"AVALANCHA: {len(con_alertas)} tiendas, {len(todas)} productos "
                  f"-> un solo mensaje agrupado")
         msgs = format_avalanche(con_alertas, config)
-        silent = solo_prioritarios and not is_loud(todas, config)
+        silent = solo_prioritarios and not is_loud(todas)
         if send_telegram_chunks(bot_token, chat_id, msgs, silent=silent):
             for name, _, alerts, new_site_state in con_alertas:
                 commit(name, new_site_state)
@@ -1087,7 +1002,7 @@ def run_once(priority_filter=None):
     else:
         for name, priority, alerts, new_site_state in con_alertas:
             msgs = format_notification(name, priority, alerts, config)
-            silent = solo_prioritarios and not is_loud(alerts, config)
+            silent = solo_prioritarios and not is_loud(alerts)
             if send_telegram_chunks(bot_token, chat_id, msgs, silent=silent):
                 commit(name, new_site_state)
                 n_alertas += len(alerts)
@@ -1095,18 +1010,7 @@ def run_once(priority_filter=None):
                 log.error(f"{name}: aviso NO enviado -> no se marca como visto, "
                           f"se reintenta en la próxima pasada")
 
-    # --- 4) Re-sincronizaciones: ruido de mantenimiento, una línea y en silencio ---
-    if resyncs:
-        detalle = "\n".join(f"• <b>{html_mod.escape(n)}</b>: {c} listados" for n, c in resyncs)
-        send_telegram(
-            bot_token, chat_id,
-            f"🔁 <b>{html_mod.escape(config.get('bot_label', 'MONITOR'))} — re-sincronización de catálogo</b>\n\n"
-            f"{detalle}\n\nAparecieron de golpe (la tienda recatalogó), así que se han "
-            f"absorbido sin detallar. Lo prioritario y los restocks se avisan aparte, nunca se absorben.",
-            silent=True,
-        )
-
-    # --- 5) Salud (caídas y tiendas ciegas): UN resumen, y en silencio ---
+    # --- 4) Salud (caídas y tiendas ciegas): UN resumen, y en silencio ---
     health_msgs, deshacer_salud = _collect_health_alerts(state, config)
     for msg in health_msgs:
         if not send_telegram(bot_token, chat_id, msg, silent=True):
