@@ -185,6 +185,18 @@
     "carpeta"
   ],
   "_comment_high": "=== PRIORITY HIGH — CASES & TIENDAS CON PREVENTA 30 ANIV ===",
+  "_comment_official": "Webs oficiales: lo nuevo se avisa con '📰 novedad oficial' semanas antes de las preventas, y sus códigos de set (set_code_pattern) pasan 60 días a prioridad 📅: un listado de tienda con ese código suena aunque su título no diga caja/box.",
+  "official_sources": [
+    {
+      "name": "Pokémon Press (calendario)",
+      "url": "https://press.pokemon.com/en/Items/Schedule/Pokemon-Trading-Card-Game",
+      "selector": "td.td-prod",
+      "title_selector": ".",
+      "link_selector": "a",
+      "info_next": "td.td-date",
+      "apply_filters": true
+    }
+  ],
   "sites": [
     {
       "_comment": "=== FEEDS DE PREVENTA/RESERVA 30 ANIV (lo primero que avisa de reservas nuevas) ===",
@@ -1086,6 +1098,31 @@
     {
       "name": "Jotta Collectz (catálogo, ex-Pokejotta)",
       "url": "https://www.jottacollectz.com/products.json?limit=250",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "_comment": "=== Secundarias añadidas 06/10/2026, verificadas desde Actions (CardCenter da 403 desde Actions y Chaos Cards también desde casa: fuera). ===",
+      "name": "Industria61 (Pokémon)",
+      "url": "https://industria61.com/wp-json/wc/store/v1/products?per_page=100&orderby=date&order=desc&category=68",
+      "type": "api",
+      "priority": "medium"
+    },
+    {
+      "name": "ZIAL TCG (Pokémon)",
+      "url": "https://zialtcg.com/wp-json/wc/store/v1/products?per_page=100&orderby=date&order=desc&category=116",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "ZIAL TCG (Preventa)",
+      "url": "https://zialtcg.com/wp-json/wc/store/v1/products?per_page=100&orderby=date&order=desc&category=199",
+      "type": "api",
+      "priority": "high"
+    },
+    {
+      "name": "Saruman Games (catálogo)",
+      "url": "https://sarumangames.es/products.json?limit=250",
       "type": "api",
       "priority": "medium"
     }
