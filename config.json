@@ -40,7 +40,10 @@
     "\\b(celebra\\w*|aniv\\w*|anniv\\w*)\\s*30(th)?\\b",
     "\\bm6a\\b",
     "first partner\\W+(series|serie|illustration|colecci)",
-    "primer companero"
+    "primer companero",
+    "ultra premium.*\\b(espeon|umbreon)\\b|\\b(espeon|umbreon)\\b.*ultra premium",
+    "\\b30c\\b(?!-)",
+    "\\b30th\\b.*\\b(tin|lata)s?\\b|\\b(tin|lata)s?\\b.*\\b30th\\b"
   ],
   "_comment_exclude": "Idiomas que NO interesan (solo ES/EN/JP). Si un título contiene alguno, se descarta aunque matchee 30 aniv.",
   "exclude_keywords": [
