@@ -222,6 +222,41 @@
         ]
       },
       {
+        "label": "Booster box JP 30th ≤150€",
+        "keywords": [
+          "booster box",
+          "display",
+          "caja 20 sobres",
+          "caja de 20 sobres",
+          "caja de sobres",
+          "caja 10 sobres",
+          "bb"
+        ],
+        "require": [
+          "30th",
+          "30 th",
+          "30 aniversario",
+          "30 aniv",
+          "30 anniversary",
+          "celebration",
+          "30周年"
+        ],
+        "exclude": [
+          "tin",
+          "gift",
+          "collection",
+          "ex box",
+          "special box",
+          "premium",
+          "live",
+          "bundle",
+          "futuristic",
+          "case",
+          "carton"
+        ],
+        "max_eur": 150
+      },
+      {
         "label": "UPC ≤200€",
         "keywords": [
           "ultra premium",
