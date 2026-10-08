@@ -39,6 +39,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_VIP_CHAT_ID: ${{ secrets.TELEGRAM_VIP_CHAT_ID }}
           WATCHDOG_TOKEN: ${{ secrets.WATCHDOG_TOKEN }}
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}   # ping externo (healthchecks.io); sin él no hace nada
         run: ./loop.sh 66
@@ -54,6 +55,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_VIP_CHAT_ID: ${{ secrets.TELEGRAM_VIP_CHAT_ID }}
           WATCHDOG_TOKEN: ${{ secrets.WATCHDOG_TOKEN }}
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}   # ping externo (healthchecks.io); sin él no hace nada
         run: ./loop.sh 66
@@ -69,6 +71,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_VIP_CHAT_ID: ${{ secrets.TELEGRAM_VIP_CHAT_ID }}
           WATCHDOG_TOKEN: ${{ secrets.WATCHDOG_TOKEN }}
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}   # ping externo (healthchecks.io); sin él no hace nada
         run: ./loop.sh 66
@@ -84,6 +87,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_VIP_CHAT_ID: ${{ secrets.TELEGRAM_VIP_CHAT_ID }}
           WATCHDOG_TOKEN: ${{ secrets.WATCHDOG_TOKEN }}
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}   # ping externo (healthchecks.io); sin él no hace nada
         run: ./loop.sh 66
@@ -99,6 +103,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_VIP_CHAT_ID: ${{ secrets.TELEGRAM_VIP_CHAT_ID }}
           WATCHDOG_TOKEN: ${{ secrets.WATCHDOG_TOKEN }}
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}   # ping externo (healthchecks.io); sin él no hace nada
         run: ./loop.sh 66

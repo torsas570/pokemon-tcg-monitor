@@ -200,6 +200,59 @@
       "apply_filters": true
     }
   ],
+  "vip": {
+    "_comment": "Grupo de importantes (secret TELEGRAM_VIP_CHAT_ID). Sin idioma en el título = inglés; sin precio legible = entra.",
+    "rules": [
+      {
+        "label": "UPC 30 aniversario",
+        "keywords": [
+          "ultra premium",
+          "ultra-premium",
+          "upc"
+        ],
+        "require": [
+          "30th",
+          "30 th",
+          "30 aniversario",
+          "30 aniv",
+          "30 anniversary",
+          "30th anniversary",
+          "celebration",
+          "30周年"
+        ]
+      },
+      {
+        "label": "UPC ≤200€",
+        "keywords": [
+          "ultra premium",
+          "ultra-premium",
+          "upc"
+        ],
+        "max_eur": 200
+      },
+      {
+        "label": "ETB EN ≤75€",
+        "keywords": [
+          "elite trainer box",
+          "elite trainer",
+          "etb",
+          "caja elite",
+          "caja de entrenador elite",
+          "entrenador elite"
+        ],
+        "lang": "en",
+        "max_eur": 75
+      },
+      {
+        "label": "Booster bundle EN ≤50€",
+        "keywords": [
+          "booster bundle"
+        ],
+        "lang": "en",
+        "max_eur": 50
+      }
+    ]
+  },
   "sites": [
     {
       "_comment": "=== FEEDS DE PREVENTA/RESERVA 30 ANIV (lo primero que avisa de reservas nuevas) ===",
